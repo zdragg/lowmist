@@ -24,7 +24,11 @@ pub struct Region {
     pub entities: Vec<Entity>,
     pub tile_entities: Vec<TileEntity>,
 
+    // Added in Litematica v3
+    #[serde(default)]
     pub pending_block_ticks: Vec<PendingBlockTick>,
+    // Added in Litematica v5
+    #[serde(default)]
     pub pending_fluid_ticks: Vec<PendingFluidTick>,
 }
 
@@ -96,7 +100,7 @@ impl Region {
     }
 
     /// Returns an iterator that iterates over every possible coordinate
-    /// and its corresponding palette entry
+    /// and its corresponding palette entry.
     pub fn block_state_iter(&self) -> impl Iterator<Item = (glam::IVec3, &BlockStatePaletteEntry)> {
         let glam::IVec3 {
             x: size_x,
