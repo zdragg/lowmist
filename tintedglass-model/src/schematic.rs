@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer};
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Schematic {
-    #[serde(deserialize_with = "version_7")]
+    #[serde(deserialize_with = "version_blocker")]
     pub version: i32,
     #[serde(default)]
     pub sub_version: i32,
@@ -22,11 +22,11 @@ pub struct Schematic {
     pub regions: HashMap<String, Region>,
 }
 
-/// Serde deserializer that blocks all non-v7 schematic files.
-fn version_7<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
+/// Serde deserializer that only allows versions 2 to 7.
+fn version_blocker<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
     let v = i32::deserialize(de)?;
     match v {
-        7 => Ok(v),
+        2..=7 => Ok(v),
         _ => Err(serde::de::Error::invalid_value(
             serde::de::Unexpected::Signed(v.into()),
             &"schematic version 7",

@@ -35,10 +35,15 @@ fn main() -> Result<(), Error> {
     let schematic =
         tintedglass_model::parse_schematic(file).context(ParseSchematicSnafu { path })?;
 
-    let (name, region) = schematic.regions.into_iter().next().unwrap();
-    println!("region name: {name}");
+    println!("Name: {:?}", schematic.metadata.name);
+    println!("Author: {:?}", schematic.metadata.author);
+    println!("Description: {:?}", schematic.metadata.description);
+    println!("Time Created: {:?}", schematic.metadata.time_created);
+    println!("Time Modified: {:?}", schematic.metadata.time_modified);
+    println!("Enclosing Size: {:?}", schematic.metadata.enclosing_size);
 
-    println!("metadata: {:?}", schematic.metadata);
+    let (name, region) = schematic.regions.into_iter().next().unwrap();
+    println!("Region Name: {name}");
 
     let non_air_count = region
         .block_state_iter()
@@ -52,5 +57,11 @@ fn main() -> Result<(), Error> {
     println!("these two values should be equal: ");
     println!("total non air blocks: {non_air_count}");
     println!("Metadata.TotalBlocks: {}", schematic.metadata.total_blocks);
+
+    // Get a random block
+    let slot: i32 = rand::random_range(0..schematic.metadata.total_volume);
+    let slot: u32 = bytemuck::cast(slot);
+    let (coord, block) = region.block_state_iter().nth(slot as usize).unwrap();
+    println!("at {coord}, there is {block:?}");
     Ok(())
 }
