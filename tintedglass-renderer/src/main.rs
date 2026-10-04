@@ -14,7 +14,7 @@ fn main() {
 struct Block;
 
 #[derive(Component)]
-struct PaletteIndex(usize);
+struct BlockId(tintedglass_model::BlockId);
 
 #[derive(Component)]
 struct Position(IVec3);
@@ -33,20 +33,23 @@ impl Plugin for BlockPlugin {
 }
 
 fn add_blocks(mut commands: Commands) {
-    commands.spawn((Block, PaletteIndex(0), Position(ivec3(0, 0, 0))));
-    commands.spawn((Block, PaletteIndex(1), Position(ivec3(0, 0, 1))));
-    commands.spawn((Block, PaletteIndex(2), Position(ivec3(2, 0, 1))));
+    // commands.spawn((Block, PaletteIndex(0), Position(ivec3(0, 0, 0))));
+    // commands.spawn((Block, PaletteIndex(1), Position(ivec3(0, 0, 1))));
+    // commands.spawn((Block, PaletteIndex(2), Position(ivec3(2, 0, 1))));
+    // DOESNT WORK
+    // because BlockId can only be obtained from the model itself,
+    // cannot be created manually
 }
 
 fn print_blocks(
     time: Res<Time>,
     mut timer: ResMut<PrintTimer>,
-    query: Query<(&PaletteIndex, &Position), With<Block>>,
+    query: Query<(&BlockId, &Position), With<Block>>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
         for (palette, position) in query {
             println!(
-                "At position {}, there exists block with palette index {}",
+                "At position {}, there exists block with palette index {:?}",
                 position.0, palette.0
             )
         }

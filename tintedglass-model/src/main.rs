@@ -59,10 +59,9 @@ fn main() -> Result<(), Error> {
 
     let non_air_count = schematic
         .blocks_dedup()
-        .filter(|(_, palette)| {
-            palette.name != "minecraft:air"
-                && palette.name != "minecraft:void_air"
-                && palette.name != "minecraft:cave_air"
+        .filter(|(_, palette_id)| {
+            let palette = schematic.palette_entry(*palette_id);
+            !palette.is_air()
         })
         .count();
 
@@ -83,12 +82,19 @@ fn main() -> Result<(), Error> {
     println!("Metadata.TotalVolume: {}", schematic.metadata.total_volume);
 
     // Get a random block
-
     let slot = rand::random_range(0..total_dedup_block_count);
-    let (pos, block) = schematic.blocks_dedup().nth(slot).unwrap();
-    println!("at {pos}, there is {block:?}");
+    let (pos, id) = schematic.blocks_dedup().nth(slot).unwrap();
+    let block = schematic.palette_entry(id);
+    println!("at {pos}, there is {id:?}, which corresponds to {block:?}");
     println!("");
 
+    // Print the whole palette
+    println!("Printing all palette entries:");
+    for (id, entry) in schematic.palettes() {
+        println!("At {id:?}, there is {entry:?}");
+    }
+
+    println!("");
     for (name, _region) in &schematic.regions {
         println!("There exists region: {name}");
     }
