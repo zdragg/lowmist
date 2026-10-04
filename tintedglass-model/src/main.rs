@@ -33,7 +33,18 @@ fn main() -> Result<(), Error> {
     let file = File::open(path).context(OpenFileSnafu { path })?;
 
     let schematic =
-        tintedglass_model::parse_schematic(file).context(ParseSchematicSnafu { path })?;
+        tintedglass_model::parse_litematic(file).context(ParseSchematicSnafu { path })?;
+
+    println!(
+        "Schematic version: {}.{}",
+        schematic.version, schematic.sub_version
+    );
+    println!(
+        "Minecraft Data version: {}",
+        schematic.minecraft_data_version
+    );
+
+    println!("");
 
     println!("Name: {:?}", schematic.metadata.name);
     println!("Author: {:?}", schematic.metadata.author);
@@ -42,11 +53,12 @@ fn main() -> Result<(), Error> {
     println!("Time Modified: {:?}", schematic.metadata.time_modified);
     println!("Enclosing Size: {:?}", schematic.metadata.enclosing_size);
 
-    let (name, region) = schematic.regions.into_iter().next().unwrap();
-    println!("Region Name: {name}");
+    println!("");
 
-    let non_air_count = region
-        .block_state_iter()
+    println!("Region count: {}", schematic.regions.len());
+
+    let non_air_count = schematic
+        .blocks_dedup()
         .filter(|(_, palette)| {
             palette.name != "minecraft:air"
                 && palette.name != "minecraft:void_air"
@@ -54,14 +66,31 @@ fn main() -> Result<(), Error> {
         })
         .count();
 
-    println!("these two values should be equal: ");
-    println!("total non air blocks: {non_air_count}");
+    println!(
+        "these two values should be equal IF NO OVERLAPPING REGIONS. If overlap, then former < latter"
+    );
+    println!("total non air blocks counted by iterator: {non_air_count}");
     println!("Metadata.TotalBlocks: {}", schematic.metadata.total_blocks);
 
+    println!(
+        "these two values should also be equal IF NO OVERLAPPING REGIONS. If overlap, then former < latter"
+    );
+    let total_dedup_block_count = schematic.blocks_dedup().count();
+    println!(
+        "total blocks counted by iterator: {}",
+        total_dedup_block_count
+    );
+    println!("Metadata.TotalVolume: {}", schematic.metadata.total_volume);
+
     // Get a random block
-    let slot: i32 = rand::random_range(0..schematic.metadata.total_volume);
-    let slot: u32 = bytemuck::cast(slot);
-    let (coord, block) = region.block_state_iter().nth(slot as usize).unwrap();
-    println!("at {coord}, there is {block:?}");
+
+    let slot = rand::random_range(0..total_dedup_block_count);
+    let (pos, block) = schematic.blocks_dedup().nth(slot).unwrap();
+    println!("at {pos}, there is {block:?}");
+    println!("");
+
+    for (name, _region) in &schematic.regions {
+        println!("There exists region: {name}");
+    }
     Ok(())
 }

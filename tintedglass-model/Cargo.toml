@@ -14,5 +14,4 @@ itertools = "0.15.0"
 jiff = { version = "0.2.37", features = ["serde"] }
 rand = "0.10.3"
 serde = "1.0.229"
-snafu = "0.9.2"
-uuid = "1.26.1"
+snafu.workspace = true

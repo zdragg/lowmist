@@ -1,7 +1,7 @@
 mod serde;
 
-mod schematic;
-pub use schematic::*;
+mod litematic;
+pub use litematic::Litematic;
 
 use std::io::Read;
 
@@ -15,13 +15,13 @@ pub struct ParseSchematicError {
     source: fastnbt::error::Error,
 }
 
-pub fn parse_schematic(schematic: impl Read) -> Result<Schematic, ParseSchematicError> {
+pub fn parse_litematic(schematic: impl Read) -> Result<Litematic, ParseSchematicError> {
     let mut decoder = GzDecoder::new(schematic);
 
     let mut data = vec![];
     decoder.read_to_end(&mut data).unwrap();
 
-    let schematic_result: Result<Schematic, _> = from_bytes(data.as_slice());
+    let schematic_result: Result<Litematic, _> = from_bytes(data.as_slice());
     let schematic = schematic_result.context(ParseSchematicSnafu)?;
     Ok(schematic)
 }
