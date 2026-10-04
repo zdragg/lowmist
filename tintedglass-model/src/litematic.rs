@@ -89,4 +89,18 @@ impl Litematic {
                 })
             })
     }
+
+    /// Finds the minimum corner of the bounding box encompassing all regions.
+    pub fn min_corner(&self) -> IVec3 {
+        self.regions
+            .values()
+            .fold(IVec3::MAX, |acc, r| acc.min(r.min_corner()))
+    }
+
+    /// Finds the maximum corner of the bounding box encompassing all regions.
+    pub fn max_corner(&self) -> IVec3 {
+        self.regions
+            .values()
+            .fold(IVec3::MIN, |acc, r| acc.max(r.max_corner()))
+    }
 }

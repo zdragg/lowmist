@@ -14,13 +14,13 @@ struct Args {
 #[derive(Debug, snafu::Snafu)]
 pub enum Error {
     #[snafu(display("Could not open {}", path.display()))]
-    OpenFileError {
+    OpenFile {
         source: std::io::Error,
         path: PathBuf,
     },
     #[snafu(display("Could not parse {} as a schematic", path.display()))]
-    ParseSchematicError {
-        source: tintedglass_model::ParseSchematicError,
+    ParseSchematic {
+        source: tintedglass_model::Error,
         path: PathBuf,
     },
 }
