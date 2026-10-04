@@ -1197,7 +1197,7 @@ dependencies = [
  "arrayvec",
  "bevy_reflect",
  "derive_more",
- "glam 0.32.1",
+ "glam",
  "itertools 0.14.0",
  "libm",
  "rand",
@@ -1227,7 +1227,7 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "encase",
- "glam 0.32.1",
+ "glam",
  "half",
  "hexasphere",
  "thiserror 2.0.21",
@@ -1377,7 +1377,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "erased-serde",
  "foldhash 0.2.0",
- "glam 0.32.1",
+ "glam",
  "indexmap",
  "inventory",
  "petgraph",
@@ -1439,7 +1439,7 @@ dependencies = [
  "derive_more",
  "downcast-rs 2.0.2",
  "encase",
- "glam 0.32.1",
+ "glam",
  "image",
  "indexmap",
  "itertools 0.14.0",
@@ -2911,15 +2911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "glam"
-version = "0.33.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37bfe73dc8ec21f54d181e5a60554327ec3f1c600c455a75ccbfc65d2106a6c4"
-dependencies = [
- "serde_core",
-]
-
-[[package]]
 name = "glow"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3122,7 +3113,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "177ea6330876de4ef08e184f827b98acc037614a4ce409902c5b0d53a9c2e951"
 dependencies = [
  "constgebra",
- "glam 0.32.1",
+ "glam",
  "tinyvec",
 ]
 
@@ -5248,7 +5239,7 @@ dependencies = [
  "clap",
  "fastnbt",
  "flate2",
- "glam 0.33.12",
+ "glam",
  "itertools 0.15.0",
  "jiff",
  "rand",

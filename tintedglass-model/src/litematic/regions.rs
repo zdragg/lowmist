@@ -41,6 +41,14 @@ pub struct BlockStatePaletteEntry {
     pub properties: HashMap<String, String>,
 }
 
+impl BlockStatePaletteEntry {
+    pub fn is_air(&self) -> bool {
+        self.name == "minecraft:air"
+            || self.name == "minecraft:void_air"
+            || self.name == "minecraft:cave_air"
+    }
+}
+
 /// `minecraft:air` is used as fallback.
 pub static AIR: LazyLock<BlockStatePaletteEntry> = LazyLock::new(|| BlockStatePaletteEntry {
     name: String::from("minecraft:air"),
