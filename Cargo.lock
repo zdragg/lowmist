@@ -5240,6 +5240,7 @@ dependencies = [
  "fastnbt",
  "flate2",
  "glam",
+ "indexmap",
  "itertools 0.15.0",
  "jiff",
  "rand",
@@ -5254,6 +5255,7 @@ dependencies = [
  "bevy",
  "log",
  "snafu",
+ "tintedglass-model",
 ]
 
 [[package]]

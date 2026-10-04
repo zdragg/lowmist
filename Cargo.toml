@@ -4,6 +4,7 @@ members = ["tintedglass-model", "tintedglass-renderer"]
 
 [workspace.dependencies]
 snafu = "0.9.2"
+tintedglass-model = { path = "tintedglass-model" }
 
 [profile.dev]
 opt-level = 1

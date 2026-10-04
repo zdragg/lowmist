@@ -1,9 +1,11 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::collections::{BTreeMap, HashMap};
 
 use bitvec::prelude::*;
 use fastnbt::LongArray;
 use glam::{DVec3, IVec3};
 use serde::Deserialize;
+
+use crate::BlockId;
 
 /// Reference: <https://github.com/sakura-ryoko/litematica/blob/f7ac844c8134745cd89a6d9690cf3c753fe57465/src/main/java/fi/dy/masa/litematica/schematic/LitematicaSchematic.java#L1761>
 #[derive(Debug, Deserialize)]
@@ -31,14 +33,21 @@ pub struct Region {
     // Added in Litematica v5
     #[serde(default)]
     pub pending_fluid_ticks: Vec<PendingFluidTick>,
+
+    /// A map of which global BlockId
+    /// each palette entry in `block_state_palette` corresponds to.
+    ///
+    /// Note: not part of the Litematica schema.
+    #[serde(skip)]
+    pub(crate) local_to_global: Vec<BlockId>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Hash, PartialEq, Eq, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct BlockStatePaletteEntry {
     pub name: String,
     #[serde(default)]
-    pub properties: HashMap<String, String>,
+    pub properties: BTreeMap<String, String>,
 }
 
 impl BlockStatePaletteEntry {
@@ -49,30 +58,25 @@ impl BlockStatePaletteEntry {
     }
 }
 
-/// `minecraft:air` is used as fallback.
-pub static AIR: LazyLock<BlockStatePaletteEntry> = LazyLock::new(|| BlockStatePaletteEntry {
-    name: String::from("minecraft:air"),
-    properties: HashMap::new(),
-});
 /// Reference: <https://github.com/sakura-ryoko/litematica/blob/f7ac844c8134745cd89a6d9690cf3c753fe57465/src/main/java/fi/dy/masa/litematica/schematic/container/LitematicaBitArray.java#L103>
 impl Region {
-    /// Takes **local** position and returns the corresponding block palette entry.
+    /// Takes **local** position and returns the corresponding block palette id.
     /// Returns None if invalid position coordinates are provided.
-    pub fn block_at_local(&self, local_pos: IVec3) -> Option<&BlockStatePaletteEntry> {
+    pub fn block_at_local(&self, local_pos: IVec3) -> Option<BlockId> {
         let slot = self.flatten_coords(local_pos)?;
-        Some(self.get_palette_entry_at(slot))
+        Some(self.get_palette_id_at(slot))
     }
 
-    /// Takes **global** position and returns the corresponding block palette entry.
+    /// Takes **global** position and returns the corresponding block palette id.
     /// Returns None if invalid position coordinates are provided.
-    pub fn block_at_global(&self, global_pos: IVec3) -> Option<&BlockStatePaletteEntry> {
+    pub fn block_at_global(&self, global_pos: IVec3) -> Option<BlockId> {
         let local_pos = self.global_to_local_pos(global_pos);
         self.block_at_local(local_pos)
     }
 
     /// Returns an iterator that iterates over every possible local coordinate
-    /// and its corresponding palette entry.
-    pub fn blocks_local_pos(&self) -> impl Iterator<Item = (IVec3, &BlockStatePaletteEntry)> {
+    /// and its corresponding palette id.
+    pub fn blocks_local_pos(&self) -> impl Iterator<Item = (IVec3, BlockId)> {
         let IVec3 {
             x: size_x,
             y: size_y,
@@ -86,7 +90,7 @@ impl Region {
     }
 
     /// Wraps the local_pos equivalent function, but uses global coordinate.
-    pub fn blocks_global_pos(&self) -> impl Iterator<Item = (IVec3, &BlockStatePaletteEntry)> {
+    pub fn blocks_global_pos(&self) -> impl Iterator<Item = (IVec3, BlockId)> {
         self.blocks_local_pos()
             .map(|(local_pos, block)| (self.local_to_global_pos(local_pos), block))
     }
@@ -176,7 +180,7 @@ impl Region {
     /// Find the palette index that provided slot in the packed bits represents,
     /// then return the palette entry that the palette index points at.
     /// Invalid slots and invalid palette index returns `minecraft:air`.
-    pub fn get_palette_entry_at(&self, slot: usize) -> &BlockStatePaletteEntry {
+    pub fn get_palette_id_at(&self, slot: usize) -> BlockId {
         // Bits used per palette entry is equal to the shortest bit length required
         // to store the index of the final palette entry.
         // Exception: each entry needs at least 2 bits.
@@ -196,14 +200,14 @@ impl Region {
             .map(|bits| bits.load_le::<u32>());
         let Some(palette_index) = palette_index else {
             // Corrupted block state
-            return &AIR;
+            return BlockId(0);
         };
 
-        // Find the corresponding entry:
-        self.block_state_palette
+        // Find the corresponding id:
+        self.local_to_global
             .get(palette_index as usize)
-            // Litematica sets invalid palette indices to `minecraft:air`.
-            .unwrap_or(&AIR)
+            .copied()
+            .unwrap_or(BlockId(0))
     }
 }
 

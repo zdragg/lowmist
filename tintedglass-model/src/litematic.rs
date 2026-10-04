@@ -1,12 +1,21 @@
 mod regions;
+use indexmap::IndexSet;
 pub use regions::*;
 mod metadata;
 pub use metadata::*;
+use snafu::ResultExt;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use glam::IVec3;
 use serde::{Deserialize, Deserializer};
+
+use crate::PaletteOverflowSnafu;
+
+/// Newtype that represents a block palette ID, used in the schematic-level
+/// deduplicated block palette.
+#[derive(Debug, PartialEq, Eq, Hash, Deserialize, Clone, Copy)]
+pub struct BlockId(pub(crate) u16);
 
 /// Reference: <https://github.com/sakura-ryoko/litematica/blob/f7ac844c8134745cd89a6d9690cf3c753fe57465/src/main/java/fi/dy/masa/litematica/schematic/LitematicaSchematic.java#L1702>
 /// This parser does not support version 1.
@@ -20,7 +29,14 @@ pub struct Litematic {
     /// [https://minecraft.wiki/w/Data_version](https://minecraft.wiki/w/Data_version)
     pub minecraft_data_version: i32,
     pub metadata: Metadata,
-    pub regions: HashMap<String, Region>,
+    pub regions: BTreeMap<String, Region>,
+
+    /// A schematic-level deduplicated block palette used for a unified access
+    /// to all block palettes under each region.
+    ///
+    /// Note: not part of the Litematica schema.
+    #[serde(skip)]
+    pub(crate) global_block_state_palette: IndexSet<BlockStatePaletteEntry>,
 }
 
 /// Serde deserializer that only allows versions 2 to 7.
@@ -36,18 +52,18 @@ fn version_blocker<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
 }
 
 impl Litematic {
-    /// Iterates through regions until it finds a block (palette) for
+    /// Iterates through regions until it finds a block id for
     /// the specified position.
     /// Returns None if none of the regions has a block at the position.
-    pub fn block_at(&self, pos: IVec3) -> Option<&BlockStatePaletteEntry> {
+    pub fn block_at(&self, pos: IVec3) -> Option<BlockId> {
         self.regions
             .iter()
             .find_map(|(_name, region)| region.block_at_global(pos))
     }
 
     /// Returns an iterator that iterates over every valid coordinate with a corresponding
-    /// palette entry. Each valid coordinate only appears once (hence deduplicated)
-    pub fn blocks_dedup(&self) -> impl Iterator<Item = (IVec3, &BlockStatePaletteEntry)> {
+    /// palette id. Each valid coordinate only appears once (hence deduplicated)
+    pub fn blocks_dedup(&self) -> impl Iterator<Item = (IVec3, BlockId)> {
         let regions = self.regions.values();
         // Creates a vector where prev_intersect[i] contains a list of references to
         // all "previous" Regions that intersect (overlap) with the i-th region in the regions.values() list.
@@ -102,5 +118,41 @@ impl Litematic {
         self.regions
             .values()
             .fold(IVec3::MIN, |acc, r| acc.max(r.max_corner()))
+    }
+
+    /// Returns the Palette Entry corresponding to the BlockId.
+    pub fn palette_entry(&self, id: BlockId) -> &BlockStatePaletteEntry {
+        self.global_block_state_palette
+            .get_index(id.0 as usize)
+            .expect("every BlockId should always have a corresponding BlockStatePaletteEntry")
+    }
+
+    /// Builds the globally used, deduplicated block palette.
+    pub(crate) fn build_global_block_palette(&mut self) -> Result<(), crate::Error> {
+        if !self.global_block_state_palette.is_empty() {
+            panic!("global palette already built")
+        }
+        self.global_block_state_palette
+            .insert(BlockStatePaletteEntry {
+                name: "minecraft:air".into(),
+                properties: BTreeMap::new(),
+            }); // BlockId(0) is the fallback entry: air.
+
+        for region in self.regions.values_mut() {
+            for entry in &region.block_state_palette {
+                let (global_index, _exists) =
+                    self.global_block_state_palette.insert_full(entry.clone());
+                let id = BlockId(u16::try_from(global_index).context(PaletteOverflowSnafu)?);
+                region.local_to_global.push(id);
+            }
+        }
+        Ok(())
+    }
+
+    pub fn palettes(&self) -> impl Iterator<Item = (BlockId, &BlockStatePaletteEntry)> {
+        self.global_block_state_palette
+            .iter()
+            .enumerate()
+            .map(|(id, entry)| (BlockId(id as u16), entry))
     }
 }
