@@ -5253,6 +5253,7 @@ name = "tintedglass-renderer"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "clap",
  "log",
  "snafu",
  "tintedglass-model",

@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.19.1", features = ["dynamic_linking"] }
+bevy = { version = "0.19.1", features = ["bevy_dev_tools", "dynamic_linking"] }
+clap.workspace = true
 log = { version = "0.4.34", features = ["max_level_debug", "release_max_level_warn"] }
 snafu.workspace = true
 tintedglass-model.workspace = true

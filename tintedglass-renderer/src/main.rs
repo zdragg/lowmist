@@ -1,57 +1,35 @@
-mod error;
-pub use error::{Error, Result};
+use std::{fs::File, path::PathBuf};
 
 use bevy::prelude::*;
+use clap::Parser;
+use snafu::ResultExt;
+use tintedglass_renderer::{Schematic, TintedGlassPlugin};
 
-fn main() {
+#[derive(Parser)]
+struct Args {
+    /// Path to the schematic file
+    schematic: PathBuf,
+}
+
+#[derive(Debug, snafu::Snafu)]
+pub enum Error {
+    #[snafu(display("Could not open schematic"))]
+    OpenFile { source: std::io::Error },
+    #[snafu(display("Could not parse schematic"))]
+    ParseSchematic { source: tintedglass_model::Error },
+}
+
+#[snafu::report]
+fn main() -> Result<(), Error> {
+    let args = Args::parse();
+    let file = File::open(args.schematic).context(OpenFileSnafu)?;
+    let litematic = tintedglass_model::parse_litematic(file).context(ParseSchematicSnafu)?;
+
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(BlockPlugin)
+        .add_plugins(TintedGlassPlugin)
+        .insert_resource(Schematic(litematic))
         .run();
-}
 
-#[derive(Component)]
-struct Block;
-
-#[derive(Component)]
-struct BlockId(tintedglass_model::BlockId);
-
-#[derive(Component)]
-struct Position(IVec3);
-
-#[derive(Resource)]
-struct PrintTimer(Timer);
-
-struct BlockPlugin;
-
-impl Plugin for BlockPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(PrintTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-            .add_systems(Startup, add_blocks)
-            .add_systems(Update, print_blocks);
-    }
-}
-
-fn add_blocks(mut commands: Commands) {
-    // commands.spawn((Block, PaletteIndex(0), Position(ivec3(0, 0, 0))));
-    // commands.spawn((Block, PaletteIndex(1), Position(ivec3(0, 0, 1))));
-    // commands.spawn((Block, PaletteIndex(2), Position(ivec3(2, 0, 1))));
-    // DOESNT WORK
-    // because BlockId can only be obtained from the model itself,
-    // cannot be created manually
-}
-
-fn print_blocks(
-    time: Res<Time>,
-    mut timer: ResMut<PrintTimer>,
-    query: Query<(&BlockId, &Position), With<Block>>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        for (palette, position) in query {
-            println!(
-                "At position {}, there exists block with palette index {:?}",
-                position.0, palette.0
-            )
-        }
-    }
+    Ok(())
 }
