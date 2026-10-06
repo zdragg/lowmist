@@ -1,163 +1,150 @@
 use bevy::{
-    input::{
-        gestures::PinchGesture,
-        mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit},
-    },
+    input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit},
     prelude::*,
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused},
 };
 
-pub struct OrbitCameraPlugin;
+pub struct MinecraftCameraPlugin;
 
-impl Plugin for OrbitCameraPlugin {
+impl Plugin for MinecraftCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_camera)
+        app.add_systems(Startup, camera.spawn())
             .add_systems(Update, control);
     }
 }
 
-#[derive(Component)]
-pub struct OrbitCamera {
-    /// Position of the focused point
-    pub focus: Vec3,
-    /// Distance from focused point
-    pub distance: f32,
-    /// Horizontal angle, around the y axis, of the direction the camera is facing (which is toward the focus point)
-    pub yaw: f32,
-    /// Vertical angle, around the x axis, of the direction the camera is facing (which is toward the focus point)
-    pub pitch: f32,
+fn camera() -> impl Scene {
+    bsn! {
+        Camera3d::default()
+        Transform::IDENTITY
+        MinecraftCamera::default()
+        Children [
+            DirectionalLight {
+                illuminance: 5000.0
+            },
+            Transform::IDENTITY
+        ]
+    }
 }
 
-impl Default for OrbitCamera {
+#[derive(Component, Clone)]
+pub(crate) struct MinecraftCamera {
+    yaw: f32,
+    pitch: f32,
+    // Blocks per second
+    speed: f32,
+}
+
+impl Default for MinecraftCamera {
     fn default() -> Self {
         Self {
-            focus: Vec3::new(0.5, 0.5, 0.5),
-            distance: 10.0,
-            yaw: std::f32::consts::FRAC_PI_4,
-            pitch: -std::f32::consts::FRAC_PI_8,
+            yaw: 0.0,
+            pitch: 0.0,
+            speed: 30.0,
         }
     }
 }
 
-/// How fast the camera rotates around the scene
-const ORBIT_SENSITIVITY: f32 = 0.005;
-/// How fast the camera slides in front of the scene
-const PAN_SENSITIVITY: f32 = 0.0015;
-/// Minimum distance from focused point
-const MIN_DISTANCE: f32 = 0.5;
-/// Maximum distance from focused point
-const MAX_DISTANCE: f32 = 500.0;
+const TURN_SENSITIVITY: f32 = 0.005;
+const MIN_SPEED: f32 = 0.5;
+const MAX_SPEED: f32 = 1000.0;
+const WHEEL_SCROLL_SENSITIVITY: f32 = 0.12;
+const TRACKPAD_SCROLL_SENSITIVITY: f32 = 0.004;
 
-const WHEEL_ZOOM_SENSITIVITY: f32 = 0.12;
-const TRACKPAD_ZOOM_SENSITIVITY: f32 = 0.01;
-const PINCH_ZOOM_SENSITIVITY: f32 = 3.0;
-const TRACKPAD_MOTION_SCALE: f32 = 0.4;
-
-impl OrbitCamera {
-    /// Change yaw and pitch based on how far the pointer dragged (in pixels).
-    fn orbit_by(&mut self, delta: Vec2) {
-        self.yaw -= delta.x * ORBIT_SENSITIVITY;
-        self.pitch -= delta.y * ORBIT_SENSITIVITY;
+impl MinecraftCamera {
+    pub(crate) fn set_rotation(&mut self, yaw: f32, pitch: f32) {
+        self.yaw = yaw;
+        self.pitch = pitch;
     }
 
-    /// Slide the point that the camera is focused on, so it looks like as if
-    /// the entire scene is moving.
-    fn pan(&mut self, transform: &Transform, delta: Vec2) {
-        let (right, up) = (transform.right(), transform.up());
-        let scale = PAN_SENSITIVITY * self.distance; // The further away, the faster it slides
-        self.focus += (-right * delta.x + up * delta.y) * scale;
+    fn rotate(&mut self, delta: Vec2) {
+        self.yaw -= delta.x * TURN_SENSITIVITY;
+        self.pitch = (self.pitch - delta.y * TURN_SENSITIVITY).clamp(
+            -std::f32::consts::FRAC_PI_2 + 0.01,
+            std::f32::consts::FRAC_PI_2 - 0.01,
+        );
     }
 
-    /// Move the camera nearer or further. Positive `amount` zooms in.
-    fn zoom(&mut self, amount: f32) {
-        self.distance = (self.distance * (1.0 - amount)).clamp(MIN_DISTANCE, MAX_DISTANCE);
+    fn apply_rotation(&self, transform: &mut Transform) {
+        transform.rotation = Quat::from_rotation_y(self.yaw) * Quat::from_rotation_x(self.pitch);
     }
 
-    /// Calculate actual camera rotation + translation from the struct, then apply.
-    fn apply_to(&self, transform: &mut Transform) {
-        let rot =
-            Quat::from_axis_angle(Vec3::Y, self.yaw) * Quat::from_axis_angle(Vec3::X, self.pitch);
-        transform.rotation = rot;
-        // +Z points out of the screen, so this Vec3 is "backwards" toward the camera.
-        // Multiply by this by rotation to get opposite of the current rotation,
-        // scaled by self.distance. Add that to the position of the focused block to get
-        // camera position.
-        //
-        // I don't really get why this works, but it works.
-        transform.translation = self.focus + rot * Vec3::new(0.0, 0.0, self.distance);
+    fn accelerate(&mut self, scroll: f32) {
+        self.speed = (self.speed * (1.0 + scroll * 0.1)).clamp(MIN_SPEED, MAX_SPEED)
+    }
+
+    fn move_toward(&self, direction: Vec3, time: f32, transform: &mut Transform) {
+        transform.translation += Quat::from_rotation_y(self.yaw) * direction * self.speed * time;
     }
 }
 
-/// Spawn a camera in its default position.
-fn spawn_camera(mut commands: Commands) {
-    let orbit = OrbitCamera::default();
-    let mut transform = Transform::IDENTITY;
-    orbit.apply_to(&mut transform);
-
-    commands.spawn((
-        Camera3d::default(),
-        transform,
-        orbit,
-        children![
-            DirectionalLight {
-                illuminance: 5000.0,
-                ..default()
-            },
-            Transform::IDENTITY
-        ],
-    ));
-}
-
-/// Handles input.
 fn control(
+    time: Res<Time>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
     mouse_scroll: Res<AccumulatedMouseScroll>,
-    mut pinch_reader: MessageReader<PinchGesture>,
-    mut camera: Single<(&mut Transform, &mut OrbitCamera)>,
+    mut focus_reader: MessageReader<WindowFocused>,
+    mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
+    mut camera: Single<(&mut Transform, &mut MinecraftCamera)>,
 ) {
-    let (transform, orbit) = &mut *camera;
-
-    let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
-    let ctrl = keys.any_pressed([
-        KeyCode::ControlLeft,
-        KeyCode::ControlRight,
-        KeyCode::SuperLeft,
-        KeyCode::SuperRight,
-    ]);
-
-    if mouse_buttons.pressed(MouseButton::Middle) {
-        let delta = mouse_motion.delta;
-        if delta != Vec2::ZERO {
-            if shift {
-                orbit.pan(transform, delta);
-            } else {
-                orbit.orbit_by(delta);
-            }
-        }
+    // Cursor grab
+    let focused = mouse_buttons.just_pressed(MouseButton::Left);
+    if focused {
+        cursor.grab_mode = CursorGrabMode::Locked;
+        cursor.visible = false;
+    }
+    let lost_focus = keys.just_pressed(KeyCode::Escape)
+        || matches!(focus_reader.read().last(), Some(message) if !message.focused);
+    if lost_focus {
+        cursor.grab_mode = CursorGrabMode::None;
+        cursor.visible = true;
     }
 
+    // Do nothing if unfocused
+    if cursor.grab_mode == CursorGrabMode::None {
+        return;
+    }
+    // Otherwise:
+
+    let (transform, camera) = &mut *camera;
+    let delta = mouse_motion.delta;
+
+    // Rotation
+    camera.rotate(delta);
+    camera.apply_rotation(transform);
+
+    // Speed change
     let scroll = mouse_scroll.delta;
     if scroll != Vec2::ZERO {
         match mouse_scroll.unit {
-            MouseScrollUnit::Line => orbit.zoom(scroll.y * WHEEL_ZOOM_SENSITIVITY),
-            MouseScrollUnit::Pixel => {
-                let delta = scroll * TRACKPAD_MOTION_SCALE;
-                if ctrl {
-                    orbit.zoom(delta.y * TRACKPAD_ZOOM_SENSITIVITY);
-                } else if shift {
-                    orbit.pan(transform, delta);
-                } else {
-                    orbit.orbit_by(delta);
-                }
-            }
+            MouseScrollUnit::Line => camera.accelerate(scroll.y * WHEEL_SCROLL_SENSITIVITY),
+            MouseScrollUnit::Pixel => camera.accelerate(scroll.y * TRACKPAD_SCROLL_SENSITIVITY),
         }
     }
 
-    let pinch: f32 = pinch_reader.read().map(|g| g.0).sum();
-    if pinch != 0.0 {
-        orbit.zoom(pinch * PINCH_ZOOM_SENSITIVITY);
+    // Movement
+    let forward = Vec3::NEG_Z;
+    let right = Vec3::X;
+    let up = Vec3::Y;
+    let mut direction = Vec3::ZERO;
+    if keys.pressed(KeyCode::KeyW) {
+        direction += forward;
     }
-
-    orbit.apply_to(transform);
+    if keys.pressed(KeyCode::KeyS) {
+        direction -= forward;
+    }
+    if keys.pressed(KeyCode::KeyD) {
+        direction += right;
+    }
+    if keys.pressed(KeyCode::KeyA) {
+        direction -= right;
+    }
+    if keys.pressed(KeyCode::Space) {
+        direction += up;
+    }
+    if keys.pressed(KeyCode::ShiftLeft) {
+        direction -= up;
+    }
+    camera.move_toward(direction.normalize_or_zero(), time.delta_secs(), transform);
 }

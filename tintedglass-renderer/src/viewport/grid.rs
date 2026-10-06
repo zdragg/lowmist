@@ -8,10 +8,13 @@ pub struct GridPlugin;
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(InfiniteGridPlugin)
-            .add_systems(Startup, spawn_grid);
+            .add_systems(Startup, grid.spawn());
     }
 }
 
-fn spawn_grid(mut commands: Commands) {
-    commands.spawn((InfiniteGrid, InfiniteGridSettings::default()));
+fn grid() -> impl Scene {
+    bsn! {
+        InfiniteGrid
+        InfiniteGridSettings::default()
+    }
 }
