@@ -57,13 +57,7 @@ fn main() -> Result<(), Error> {
 
     println!("Region count: {}", schematic.regions.len());
 
-    let non_air_count = schematic
-        .blocks_dedup()
-        .filter(|(_, palette_id)| {
-            let palette = schematic.palette_entry(*palette_id);
-            !palette.is_air()
-        })
-        .count();
+    let non_air_count = schematic.blocks_without_air().count();
 
     println!(
         "these two values should be equal IF NO OVERLAPPING REGIONS. If overlap, then former < latter"
@@ -74,16 +68,13 @@ fn main() -> Result<(), Error> {
     println!(
         "these two values should also be equal IF NO OVERLAPPING REGIONS. If overlap, then former < latter"
     );
-    let total_dedup_block_count = schematic.blocks_dedup().count();
-    println!(
-        "total blocks counted by iterator: {}",
-        total_dedup_block_count
-    );
+    let total_block_count = schematic.blocks().count();
+    println!("total blocks counted by iterator: {}", total_block_count);
     println!("Metadata.TotalVolume: {}", schematic.metadata.total_volume);
 
     // Get a random block
-    let slot = rand::random_range(0..total_dedup_block_count);
-    let (pos, id) = schematic.blocks_dedup().nth(slot).unwrap();
+    let slot = rand::random_range(0..total_block_count);
+    let (pos, id) = schematic.blocks().nth(slot).unwrap();
     let block = schematic.palette_entry(id);
     println!("at {pos}, there is {id:?}, which corresponds to {block:?}");
     println!("");
