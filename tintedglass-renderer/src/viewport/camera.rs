@@ -30,10 +30,10 @@ pub struct OrbitCamera {
 impl Default for OrbitCamera {
     fn default() -> Self {
         Self {
-            focus: Vec3::ZERO,
+            focus: Vec3::new(0.5, 0.5, 0.5),
             distance: 10.0,
-            yaw: -0.7,
-            pitch: 0.5,
+            yaw: std::f32::consts::FRAC_PI_4,
+            pitch: -std::f32::consts::FRAC_PI_8,
         }
     }
 }
@@ -93,7 +93,18 @@ fn spawn_camera(mut commands: Commands) {
     let mut transform = Transform::IDENTITY;
     orbit.apply_to(&mut transform);
 
-    commands.spawn((Camera3d::default(), transform, orbit));
+    commands.spawn((
+        Camera3d::default(),
+        transform,
+        orbit,
+        children![
+            DirectionalLight {
+                illuminance: 5000.0,
+                ..default()
+            },
+            Transform::IDENTITY
+        ],
+    ));
 }
 
 /// Handles input.
