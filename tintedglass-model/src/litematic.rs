@@ -17,6 +17,12 @@ use crate::PaletteOverflowSnafu;
 #[derive(Debug, PartialEq, Eq, Hash, Deserialize, Clone, Copy)]
 pub struct BlockId(pub(crate) u16);
 
+impl BlockId {
+    pub fn id(&self) -> u16 {
+        self.0
+    }
+}
+
 /// Reference: <https://github.com/sakura-ryoko/litematica/blob/f7ac844c8134745cd89a6d9690cf3c753fe57465/src/main/java/fi/dy/masa/litematica/schematic/LitematicaSchematic.java#L1702>
 /// This parser does not support version 1.
 #[derive(Debug, Deserialize)]
