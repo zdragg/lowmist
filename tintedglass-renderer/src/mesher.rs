@@ -29,10 +29,6 @@ pub(super) fn build_mesh(schematic: &Litematic) -> Mesh {
     let mut total_face_count = 0;
 
     for (pos, block_id) in schematic.blocks_without_air() {
-        if block_id.is_air() {
-            continue;
-        }
-
         for face in Face::FACES {
             let neighbor_pos = pos + face.neighbor_offset();
             if let Some(block_id) = schematic.block_at(neighbor_pos)
