@@ -15,11 +15,15 @@ use crate::PaletteOverflowSnafu;
 /// Newtype that represents a block palette ID, used in the schematic-level
 /// deduplicated block palette.
 #[derive(Debug, PartialEq, Eq, Hash, Deserialize, Clone, Copy)]
-pub struct BlockId(pub(crate) u16);
+pub struct BlockId(u16);
 
 impl BlockId {
     pub fn id(&self) -> u16 {
         self.0
+    }
+    pub const AIR: BlockId = BlockId(0);
+    pub fn is_air(&self) -> bool {
+        self.0 < 3 // palette 0, 1 and 2 is "minecraft:{air, cave_air, void_air}"
     }
 }
 
@@ -69,7 +73,7 @@ impl Litematic {
 
     /// Returns an iterator that iterates over every valid coordinate with a corresponding
     /// palette id. Each valid coordinate only appears once (hence deduplicated)
-    pub fn blocks_dedup(&self) -> impl Iterator<Item = (IVec3, BlockId)> {
+    pub fn blocks(&self) -> impl Iterator<Item = (IVec3, BlockId)> {
         let regions = self.regions.values();
         // Creates a vector where prev_intersect[i] contains a list of references to
         // all "previous" Regions that intersect (overlap) with the i-th region in the regions.values() list.
@@ -112,6 +116,10 @@ impl Litematic {
             })
     }
 
+    pub fn blocks_without_air(&self) -> impl Iterator<Item = (IVec3, BlockId)> {
+        self.blocks().filter(|(_pos, block)| !block.is_air())
+    }
+
     /// Finds the minimum corner of the bounding box encompassing all regions.
     pub fn min_corner(&self) -> IVec3 {
         self.regions
@@ -124,6 +132,11 @@ impl Litematic {
         self.regions
             .values()
             .fold(IVec3::MIN, |acc, r| acc.max(r.max_corner()))
+    }
+
+    /// Returns (min_corner, max_corner)
+    pub fn bounds(&self) -> (IVec3, IVec3) {
+        (self.min_corner(), self.max_corner())
     }
 
     /// Returns the Palette Entry corresponding to the BlockId.
@@ -142,7 +155,19 @@ impl Litematic {
             .insert(BlockStatePaletteEntry {
                 name: "minecraft:air".into(),
                 properties: BTreeMap::new(),
-            }); // BlockId(0) is the fallback entry: air.
+            }); // BlockId(0) for the fallback entry
+
+        self.global_block_state_palette
+            .insert(BlockStatePaletteEntry {
+                name: "minecraft:cave_air".into(),
+                properties: BTreeMap::new(),
+            });
+
+        self.global_block_state_palette
+            .insert(BlockStatePaletteEntry {
+                name: "minecraft:void_air".into(),
+                properties: BTreeMap::new(),
+            });
 
         for region in self.regions.values_mut() {
             for entry in &region.block_state_palette {

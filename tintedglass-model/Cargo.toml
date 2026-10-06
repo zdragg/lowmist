@@ -4,14 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bitvec = "1.1.1"
 bytemuck = "1.25.2"
 clap.workspace = true
 fastnbt = "2.6.3"
 flate2 = "1.1.10"
 glam = { version = "0.32.1", features = ["serde"] }
 indexmap = "2.14.2"
-itertools = "0.15.0"
+itertools.workspace = true
 jiff = { version = "0.2.37", features = ["serde"] }
 rand = "0.10.3"
 serde = "1.0.229"

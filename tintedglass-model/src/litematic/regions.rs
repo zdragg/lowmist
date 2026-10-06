@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
 
-use bitvec::prelude::*;
 use fastnbt::LongArray;
 use glam::{DVec3, IVec3};
 use serde::Deserialize;
@@ -51,10 +50,8 @@ pub struct BlockStatePaletteEntry {
 }
 
 impl BlockStatePaletteEntry {
-    pub fn is_air(&self) -> bool {
-        self.name == "minecraft:air"
-            || self.name == "minecraft:void_air"
-            || self.name == "minecraft:cave_air"
+    pub fn is_opaque(&self) -> bool {
+        true // TODO: check if full, opaque block or not
     }
 }
 
@@ -192,22 +189,35 @@ impl Region {
         // Turn the block states, deref coerced into &[i64] then cast into &[u64],
         // into a contiguous bit slice.
         let words: &[u64] = bytemuck::cast_slice(&self.block_states);
-        let bit_slice = words.view_bits::<Lsb0>();
 
-        // Find the bits that the slot points at in the bit slice, then cast to u32
-        let palette_index = bit_slice
-            .get(slot * bits_per_slot..(slot + 1) * bits_per_slot)
-            .map(|bits| bits.load_le::<u32>());
-        let Some(palette_index) = palette_index else {
-            // Corrupted block state
-            return BlockId(0);
+        let Some(number) = Self::get_within_packed_bits(slot, bits_per_slot, words) else {
+            // Corrupted blockstate
+            return BlockId::AIR;
         };
 
         // Find the corresponding id:
         self.local_to_global
-            .get(palette_index as usize)
+            .get(number as usize)
             .copied()
-            .unwrap_or(BlockId(0))
+            .unwrap_or(BlockId::AIR)
+    }
+
+    fn get_within_packed_bits(slot: usize, bits_per_slot: usize, bytes: &[u64]) -> Option<u64> {
+        let start = slot * bits_per_slot; // The starting bit of the number, inclusive
+        let word_index = start / 64; // words[word_index]
+        let offset = start % 64; // Which bit within words[word_index]
+
+        let fits_in_one_word = offset + bits_per_slot <= 64;
+
+        let mask: u64 = (0b1 << bits_per_slot) - 1; // e.g. if 5 bits per slot, then mask is 0b0000...00011111
+
+        if fits_in_one_word {
+            Some((bytes.get(word_index)? >> offset) & mask)
+        } else {
+            let lo = bytes.get(word_index)? >> offset;
+            let hi = bytes.get(word_index + 1)? << (64 - offset);
+            Some((lo | hi) & mask)
+        }
     }
 }
 
