@@ -1,9 +1,12 @@
 use std::{fs::File, path::PathBuf};
 
-use bevy::prelude::*;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    prelude::*,
+};
 use clap::Parser;
 use snafu::ResultExt;
-use tintedglass_renderer::{Schematic, TintedGlassPlugin};
+use tintedglass_renderer::{Schematic, TintedGlassPlugins};
 
 #[derive(Parser)]
 struct Args {
@@ -27,7 +30,9 @@ fn main() -> Result<(), Error> {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(TintedGlassPlugin)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(LogDiagnosticsPlugin::default())
+        .add_plugins(TintedGlassPlugins)
         .insert_resource(Schematic(litematic))
         .run();
 
