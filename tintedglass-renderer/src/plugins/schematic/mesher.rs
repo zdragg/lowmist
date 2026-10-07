@@ -1,34 +1,40 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
-
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology},
+    platform::{collections::HashMap, hash::fixed_hash_one},
     prelude::*,
 };
 use tintedglass_model::Litematic;
 
-pub(super) fn build_mesh(schematic: &Litematic) -> Mesh {
+pub(super) fn build_chunked_meshes(schematic: &Litematic) -> impl Iterator<Item = (IVec3, Mesh)> {
     // BlockId(num) -> color_map(num) to find color
     let color_map: Vec<_> = schematic
         .palettes()
         .map(|(_, palette)| {
-            let mut hasher = DefaultHasher::new();
-            palette.name.hash(&mut hasher);
-            let hue = (hasher.finish() % 360) as f32;
+            let hue = (fixed_hash_one(&palette.name) % 360) as f32;
             Color::hsl(hue, 0.6, 0.5)
         })
         .collect();
 
-    // Corner coordinates
-    let mut positions = vec![];
-    // Face directions
-    let mut normals = vec![];
-    // Colors
-    let mut colors = vec![];
-    // Total face count
-    let mut total_face_count = 0;
+    #[derive(Default)]
+    struct Attributes {
+        // Corner coordinates
+        positions: Vec<[f32; 3]>,
+        // Face directions
+        normals: Vec<[f32; 3]>,
+        // Colors
+        colors: Vec<[f32; 4]>,
+        // Total face count
+        face_count: u32,
+    }
+
+    let mut attributes: HashMap<IVec3, Attributes> = HashMap::new();
 
     for (pos, block_id) in schematic.blocks_without_air() {
+        let chunk_pos = pos.div_euclid(IVec3::splat(16));
+        let rel_chunk_pos = pos.rem_euclid(IVec3::splat(16));
+        let chunk_attributes = attributes.entry(chunk_pos).or_default();
+
         for face in Face::FACES {
             let neighbor_pos = pos + face.neighbor_offset();
             if let Some(block_id) = schematic.block_at(neighbor_pos)
@@ -39,32 +45,46 @@ pub(super) fn build_mesh(schematic: &Litematic) -> Mesh {
                 continue;
             }
 
-            // Append the 4 global corner positions of this face, 3 [f32; 4] per face
-            positions.extend(face.corners().into_iter().map(|rel_corner_pos| {
-                let corner_pos = rel_corner_pos + pos.as_vec3();
-                corner_pos.to_array()
-            }));
+            // Append the 4 global corner positions of this face, 4 [f32; 3] per face
+            chunk_attributes
+                .positions
+                .extend(face.corners().into_iter().map(|rel_corner_pos| {
+                    let corner_pos = rel_corner_pos + rel_chunk_pos.as_vec3();
+                    corner_pos.to_array()
+                }));
 
-            // Append the normal of the face, once per vertex, 3 [f32; 4] per face
-            normals.extend(std::iter::repeat_n(face.normal().to_array(), 4));
+            // Append the normal of the face, once per vertex, 4 [f32; 3] per face
+            chunk_attributes
+                .normals
+                .extend(std::iter::repeat_n(face.normal().to_array(), 4));
 
             // Append the color of the face, once per vertex, 4 [f32; 4] per face
-            colors.extend(std::iter::repeat_n(
+            chunk_attributes.colors.extend(std::iter::repeat_n(
                 color_map[block_id.id() as usize].to_linear().to_f32_array(),
                 4,
             ));
-            total_face_count += 1;
+
+            // increment face count
+            chunk_attributes.face_count += 1;
         }
     }
 
-    Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
-    .with_inserted_indices(indices(total_face_count))
+    attributes
+        .into_iter()
+        .filter_map(|(chunk_pos, attributes)| {
+            if attributes.face_count == 0 {
+                return None;
+            }
+            let mesh = Mesh::new(
+                PrimitiveTopology::TriangleList,
+                RenderAssetUsages::RENDER_WORLD,
+            )
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, attributes.positions)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, attributes.normals)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, attributes.colors)
+            .with_inserted_indices(indices(attributes.face_count));
+            Some((chunk_pos, mesh))
+        })
 }
 
 /// Returns the indices vector for `count` faces.

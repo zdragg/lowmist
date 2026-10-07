@@ -7,6 +7,6 @@ edition = "2024"
 bevy = { version = "0.19.1", features = ["bevy_dev_tools", "dynamic_linking", "free_camera"] }
 clap.workspace = true
 itertools.workspace = true
-log = { version = "0.4.34", features = ["max_level_debug", "release_max_level_warn"] }
+log = { version = "0.4.34" }
 snafu.workspace = true
 tintedglass-model.workspace = true
