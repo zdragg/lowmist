@@ -4,7 +4,7 @@ use bevy::{
     platform::{collections::HashMap, hash::fixed_hash_one},
     prelude::*,
 };
-use tintedglass_model::Litematic;
+use lowmist_schematic::Litematic;
 
 pub(super) fn build_chunked_meshes(schematic: &Litematic) -> impl Iterator<Item = (IVec3, Mesh)> {
     // BlockId(num) -> color_map(num) to find color

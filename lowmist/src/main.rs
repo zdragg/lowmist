@@ -3,7 +3,7 @@ use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
 };
-use tintedglass_renderer::{TintedGlassPlugins, plugins::schematic::SchematicHandle};
+use lowmist::{TintedGlassPlugins, plugins::schematic::SchematicHandle};
 
 fn main() -> Result<()> {
     App::new()

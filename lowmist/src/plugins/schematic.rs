@@ -4,7 +4,7 @@ use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
     prelude::*,
 };
-use tintedglass_model::Litematic;
+use lowmist_schematic::Litematic;
 
 pub struct SchematicPlugin;
 
