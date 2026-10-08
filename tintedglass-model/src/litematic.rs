@@ -1,16 +1,16 @@
 mod regions;
+use fastnbt::from_bytes;
+use flate2::read::GzDecoder;
+use glam::IVec3;
 use indexmap::IndexSet;
 pub use regions::*;
 mod metadata;
 pub use metadata::*;
 use snafu::ResultExt;
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, io::Read};
 
-use glam::IVec3;
 use serde::{Deserialize, Deserializer};
-
-use crate::PaletteOverflowSnafu;
 
 /// Newtype that represents a block palette ID, used in the schematic-level
 /// deduplicated block palette.
@@ -61,7 +61,34 @@ fn version_blocker<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
     }
 }
 
+#[derive(Debug, snafu::Snafu)]
+pub enum Error {
+    #[snafu(display("Could not parse bytes as a schematic"))]
+    ParseSchematic { source: fastnbt::error::Error },
+    #[snafu(
+        visibility(pub(crate)),
+        display("More than u16::MAX global palette entries created")
+    )]
+    PaletteOverflow { source: std::num::TryFromIntError },
+    #[snafu(display("Could not read file bytes"))]
+    FileRead { source: std::io::Error },
+}
+
 impl Litematic {
+    /// Parses any [`Read`] that represents a .litematic file and returns [`Litematic`].
+    pub fn parse(bytes: impl Read) -> Result<Self, Error> {
+        let mut decoder = GzDecoder::new(bytes);
+
+        let mut data = vec![];
+        decoder.read_to_end(&mut data).context(FileReadSnafu)?;
+
+        let schematic_result: Result<Litematic, _> = from_bytes(data.as_slice());
+        let mut schematic = schematic_result.context(ParseSchematicSnafu)?;
+
+        schematic.build_global_block_palette()?;
+
+        Ok(schematic)
+    }
     /// Iterates through regions until it finds a block id for
     /// the specified position.
     /// Returns None if none of the regions has a block at the position.

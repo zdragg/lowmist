@@ -609,6 +609,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_blob_loader"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52a3a01eb4c27180ae2854b1b554324d5d43d6cb73605e90e295ea642fa214d7"
+dependencies = [
+ "base64",
+ "bevy",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "bevy_camera"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -632,24 +646,6 @@ dependencies = [
  "smallvec",
  "thiserror 2.0.21",
  "wgpu-types",
-]
-
-[[package]]
-name = "bevy_camera_controller"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfb356016add201b084008c4320d8ef1696a843f0dcf92db35992731cfef65b1"
-dependencies = [
- "bevy_app",
- "bevy_camera",
- "bevy_ecs",
- "bevy_input",
- "bevy_log",
- "bevy_math",
- "bevy_picking",
- "bevy_time",
- "bevy_transform",
- "bevy_window",
 ]
 
 [[package]]
@@ -1070,7 +1066,6 @@ dependencies = [
  "bevy_asset",
  "bevy_audio",
  "bevy_camera",
- "bevy_camera_controller",
  "bevy_clipboard",
  "bevy_color",
  "bevy_core_pipeline",
@@ -1817,6 +1812,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_web_file_drop"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53c26837bd30e796b8fb4ff045df3fa44abb041b0721b4097012e0f199000c13"
+dependencies = [
+ "bevy",
+ "bevy_blob_loader",
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "bevy_window"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2064,17 +2071,6 @@ name = "cfg_aliases"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
-
-[[package]]
-name = "chacha20"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
-dependencies = [
- "cfg-if",
- "cpufeatures",
- "rand_core",
-]
 
 [[package]]
 name = "clap"
@@ -2850,7 +2846,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "r-efi 6.0.0",
- "rand_core",
 ]
 
 [[package]]
@@ -4575,7 +4570,6 @@ version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65c9fb96cbc91e3478eaae79a69fcd3f1ae4ad052e471fe6732fff548984b4af"
 dependencies = [
- "chacha20",
  "getrandom 0.4.3",
  "rand_core",
 ]
@@ -5231,7 +5225,6 @@ dependencies = [
  "indexmap",
  "itertools 0.15.0",
  "jiff",
- "rand",
  "serde",
  "snafu",
 ]
@@ -5241,10 +5234,9 @@ name = "tintedglass-renderer"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "clap",
+ "bevy_web_file_drop",
  "itertools 0.15.0",
  "log",
- "snafu",
  "tintedglass-model",
 ]
 
@@ -5769,6 +5761,7 @@ dependencies = [
  "smallvec",
  "static_assertions",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
  "wgpu-core",
  "wgpu-hal",

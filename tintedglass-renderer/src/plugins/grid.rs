@@ -3,12 +3,13 @@ use bevy::{
     prelude::*,
 };
 
-pub struct GridPlugin;
+pub struct ChunkGridPlugin;
 
-impl Plugin for GridPlugin {
+impl Plugin for ChunkGridPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(InfiniteGridPlugin)
-            .add_systems(Startup, spawn_grid);
+            .add_systems(Startup, spawn_grid)
+            .add_systems(Update, shift_grid_to_prevent_z_fighting);
     }
 }
 
@@ -36,4 +37,23 @@ fn spawn_grid(mut commands: Commands) {
             ..default()
         },
     ));
+}
+
+fn shift_grid_to_prevent_z_fighting(
+    camera: Option<Single<&Transform, With<Camera3d>>>,
+    mut grid_transforms: Query<&mut Transform, (With<InfiniteGrid>, Without<Camera3d>)>,
+) {
+    let Some(camera) = camera else {
+        return;
+    };
+
+    let y = if camera.translation.y.is_sign_positive() {
+        0.001
+    } else {
+        -0.001
+    };
+
+    for mut transform in &mut grid_transforms {
+        transform.translation.y = y;
+    }
 }

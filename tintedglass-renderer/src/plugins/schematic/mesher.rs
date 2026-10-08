@@ -37,15 +37,15 @@ pub(super) fn build_chunked_meshes(schematic: &Litematic) -> impl Iterator<Item 
 
         for face in Face::FACES {
             let neighbor_pos = pos + face.neighbor_offset();
-            if let Some(block_id) = schematic.block_at(neighbor_pos)
-                && !block_id.is_air()
-                && schematic.palette_entry(block_id).is_opaque()
+            if let Some(neighbor_id) = schematic.block_at(neighbor_pos)
+                && !neighbor_id.is_air()
+                && schematic.palette_entry(neighbor_id).is_opaque()
             {
                 // The face is next to an opaque block, culled
                 continue;
             }
 
-            // Append the 4 global corner positions of this face, 4 [f32; 3] per face
+            // Append the 4 corner positions of this face, 4 [f32; 3] per face
             chunk_attributes
                 .positions
                 .extend(face.corners().into_iter().map(|rel_corner_pos| {
@@ -89,19 +89,36 @@ pub(super) fn build_chunked_meshes(schematic: &Litematic) -> impl Iterator<Item 
 
 /// Returns the indices vector for `count` faces.
 fn indices(count: u32) -> Indices {
-    let mut vec = Vec::with_capacity(6 * count as usize);
-    for face in 0..count {
-        let offset = face * 4;
-        vec.extend_from_slice(&[
-            offset,
-            offset + 1,
-            offset + 2,
-            offset,
-            offset + 2,
-            offset + 3,
-        ]);
+    if count <= 16384 {
+        // Indices fits within u16
+        let mut vec = Vec::with_capacity(6 * count as usize);
+        for face in 0..count as u16 {
+            let offset = face * 4;
+            vec.extend_from_slice(&[
+                offset,
+                offset + 1,
+                offset + 2,
+                offset,
+                offset + 2,
+                offset + 3,
+            ]);
+        }
+        Indices::U16(vec)
+    } else {
+        let mut vec = Vec::with_capacity(6 * count as usize);
+        for face in 0..count {
+            let offset = face * 4;
+            vec.extend_from_slice(&[
+                offset,
+                offset + 1,
+                offset + 2,
+                offset,
+                offset + 2,
+                offset + 3,
+            ]);
+        }
+        Indices::U32(vec)
     }
-    Indices::U32(vec)
 }
 
 struct Face {

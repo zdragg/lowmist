@@ -1,4 +1,4 @@
-use tintedglass_model;
+use tintedglass_model::Litematic;
 
 use std::{fs::File, path::PathBuf};
 
@@ -32,8 +32,7 @@ fn main() -> Result<(), Error> {
 
     let file = File::open(path).context(OpenFileSnafu { path })?;
 
-    let schematic =
-        tintedglass_model::parse_litematic(file).context(ParseSchematicSnafu { path })?;
+    let schematic = Litematic::parse(file).context(ParseSchematicSnafu { path })?;
 
     println!(
         "Schematic version: {}.{}",
@@ -71,13 +70,6 @@ fn main() -> Result<(), Error> {
     let total_block_count = schematic.blocks().count();
     println!("total blocks counted by iterator: {}", total_block_count);
     println!("Metadata.TotalVolume: {}", schematic.metadata.total_volume);
-
-    // Get a random block
-    let slot = rand::random_range(0..total_block_count);
-    let (pos, id) = schematic.blocks().nth(slot).unwrap();
-    let block = schematic.palette_entry(id);
-    println!("at {pos}, there is {id:?}, which corresponds to {block:?}");
-    println!("");
 
     // Print the whole palette
     println!("Printing all palette entries:");
