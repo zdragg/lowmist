@@ -3627,6 +3627,7 @@ dependencies = [
  "itertools 0.15.0",
  "log",
  "lowmist-schematic",
+ "voxel-traversal",
 ]
 
 [[package]]
@@ -5516,6 +5517,16 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "voxel-traversal"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "233fa8e1a12444d7b30e550a1751a0dbf53b3ffcccb50f48c040a4408f524b25"
+dependencies = [
+ "glam",
+ "num-traits",
+]
 
 [[package]]
 name = "walkdir"

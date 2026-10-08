@@ -2,6 +2,7 @@ pub mod plugins;
 
 use bevy::{app::PluginGroupBuilder, prelude::*};
 
+use crate::plugins::waila::WailaPlugin;
 pub use crate::plugins::{
     camera::MinecraftCameraPlugin, grid::ChunkGridPlugin, schematic::SchematicPlugin,
 };
@@ -14,5 +15,6 @@ impl PluginGroup for TintedGlassPlugins {
             .add(SchematicPlugin)
             .add(MinecraftCameraPlugin)
             .add(ChunkGridPlugin)
+            .add(WailaPlugin)
     }
 }

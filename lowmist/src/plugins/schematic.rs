@@ -10,7 +10,7 @@ pub struct SchematicPlugin;
 
 impl Plugin for SchematicPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SchematicHandle>()
+        app.init_resource::<LoadedSchematic>()
             .init_asset::<SchematicAsset>()
             .init_asset_loader::<SchematicLoader>()
             .add_message::<SchematicSpawned>()
@@ -21,8 +21,11 @@ impl Plugin for SchematicPlugin {
 #[derive(Asset, TypePath)]
 pub struct SchematicAsset(Litematic);
 
-#[derive(Default, Resource)]
-pub struct SchematicHandle(pub Handle<SchematicAsset>);
+impl SchematicAsset {
+    pub fn inner(&self) -> &Litematic {
+        &self.0
+    }
+}
 
 #[derive(Default, TypePath)]
 struct SchematicLoader;
@@ -49,9 +52,39 @@ impl AssetLoader for SchematicLoader {
     }
 }
 
+/// This resource holds a handle pointing at the currently loaded schematic.
+///
+/// The associated plugin renders the schematic stored within this resource.
+///
+/// To change the loaded schematic:
+/// ```rust
+/// fn load_schematic(
+///     mut loaded_handle_resource: ResMut<LoadedSchematic>,
+///     asset_server: Res<AssetServer>
+/// ) {
+///     let schem_asset_path = todo!();
+///     loaded_handle_resource.0 = asset_server.load(schem_asset_path);
+/// }
+/// ```
+///
+/// To read the loaded schematic:
+/// ```rust
+/// fn read_schematic(
+///     loaded_handle_resource: Res<LoadedSchematic>,
+///     loaded_assets: Res<Assets<SchematicAsset>>,
+/// ) {
+///     let loaded_handle = &loaded_handle_resource.0;
+///     if let Some(loaded_asset) = loaded_assets.get(loaded_handle) {
+///         todo!();
+///     }
+/// }
+/// ```
+#[derive(Default, Resource)]
+pub struct LoadedSchematic(pub Handle<SchematicAsset>);
+
 /// A message that indicates a successful schematic spawn and includes the schemaitc bounds.
 ///
-/// Use this to initialize the camera with reasonable numbers.
+/// Could be used to help Cameras initialize itself with a reasonable Transform.
 #[derive(Message)]
 pub struct SchematicSpawned {
     /// The schematic's corner with the smallest number on each axis
@@ -60,6 +93,12 @@ pub struct SchematicSpawned {
     pub max_corner: IVec3,
 }
 
+// Do not make this component public.
+// The sole purpose for this to hold the handle is for a way to check
+// whether the currently spawned schematic entity and the schematic stored
+// within LoadedSchematic above is the same schematic or not.
+//
+// If you want to get access to the schematic, do it through the LoadedSchematic Resource.
 #[derive(Component)]
 struct SchematicRoot(Handle<SchematicAsset>);
 
@@ -67,38 +106,38 @@ fn spawn_schematic_on_load(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-
+    rendered_schem: Option<Single<(Entity, &SchematicRoot)>>,
+    loaded_assets: Res<Assets<SchematicAsset>>,
+    loaded_handle_resource: Res<LoadedSchematic>,
     mut message_writer: MessageWriter<SchematicSpawned>,
-    loaded_schem: Option<Single<(Entity, &SchematicRoot)>>,
-
-    schematics: Res<Assets<SchematicAsset>>,
-    asset_handle: Res<SchematicHandle>,
 ) {
-    let Some(asset_schem) = schematics.get(&asset_handle.0) else {
-        return; // No schematic loaded
+    // A "Loaded" schematic is one currently loaded within the asset server.
+    // A "Rendered" schematic is the one being rendered in the world.
+
+    let loaded_handle = &loaded_handle_resource.0;
+    let Some(loaded_asset) = loaded_assets.get(loaded_handle) else {
+        return; // No Loaded schematic. Nothing to do.
     };
-    // A schematic exists in asset storage.
 
-    // If a schematic is already loaded:
-    if let Some(loaded_schem) = loaded_schem {
-        let (loaded_entity, loaded_parent) = *loaded_schem;
-        let loaded_handle = &loaded_parent.0; // Obtain the handle stored in SchematicRoot
+    if let Some(rendered_schem) = rendered_schem {
+        // A schematic is being Rendered.
+        let (rendered_entity, rendered_root) = *rendered_schem;
+        let rendered_schem_handle = &rendered_root.0; // Obtain the asset handle for the Rendered schematic.
 
-        if loaded_handle == &asset_handle.0 {
-            // Loaded schematic is equal to the one in storage.
-            return;
+        if rendered_schem_handle == loaded_handle {
+            return; // Rendered == Loaded, nothing to do
         }
 
-        // Otherwise, a new schematic has loaded. Despawn the currently loaded entity.
-        commands.entity(loaded_entity).despawn();
+        // Otherwise, a different schematic is Loaded. Despawn the Rendered schematic entity.
+        commands.entity(rendered_entity).despawn();
     }
 
-    let schematic = &asset_schem.0;
-    let standard_material = materials.add(StandardMaterial { ..default() });
+    let schematic = &loaded_asset.0;
+    let material_handle = materials.add(StandardMaterial { ..default() });
 
     commands
         .spawn((
-            SchematicRoot(asset_handle.0.clone()), // Store the handle inside the root entity
+            SchematicRoot(loaded_handle_resource.0.clone()), // Store the handle inside the root entity
             Transform::IDENTITY,
             Visibility::default(),
         ))
@@ -106,7 +145,7 @@ fn spawn_schematic_on_load(
             for (chunk_pos, mesh) in mesher::build_chunked_meshes(schematic) {
                 parent.spawn((
                     Mesh3d(meshes.add(mesh)),
-                    MeshMaterial3d(standard_material.clone()),
+                    MeshMaterial3d(material_handle.clone()),
                     Transform::from_translation((chunk_pos * 16).as_vec3()),
                 ));
             }

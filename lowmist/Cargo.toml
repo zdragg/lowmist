@@ -9,3 +9,4 @@ bevy_web_file_drop = "0.4.0"
 itertools.workspace = true
 log = { version = "0.4.34" }
 lowmist-schematic.workspace = true
+voxel-traversal = { version = "0.4.0", features = ["glam"] }
