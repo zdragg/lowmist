@@ -95,9 +95,13 @@ impl MinecraftCamera {
         );
     }
 
-    fn apply_to(&self, transform: &mut Transform) {
-        transform.translation = self.position;
-        transform.rotation = Quat::from_rotation_y(self.yaw) * Quat::from_rotation_x(self.pitch);
+    fn apply_to(&self, mut transform: Mut<Transform>) {
+        let new = Transform {
+            translation: self.position,
+            rotation: Quat::from_rotation_y(self.yaw) * Quat::from_rotation_x(self.pitch),
+            scale: transform.scale,
+        };
+        transform.set_if_neq(new);
     }
 
     fn accelerate(&mut self, scroll: f32) {
@@ -127,10 +131,10 @@ fn control(
     mouse_motion: Res<AccumulatedMouseMotion>,
     mouse_scroll: Res<AccumulatedMouseScroll>,
     mut focus_reader: MessageReader<WindowFocused>,
-    mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
-    mut camera: Single<(&mut Transform, &mut MinecraftCamera)>,
+    mut cursor: Single<Mut<CursorOptions>, With<PrimaryWindow>>,
+    camera: Single<(Mut<Transform>, Mut<MinecraftCamera>)>,
 ) {
-    let (transform, camera) = &mut *camera;
+    let (transform, mut camera) = camera.into_inner();
 
     // If schematic just spawned, initialize camera based on provided bounds
     if let Some(schematic_spawned) = schematic_spawned.read().last() {

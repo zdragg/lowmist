@@ -3,7 +3,7 @@ use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
 };
-use lowmist::{TintedGlassPlugins, plugins::schematic::SchematicHandle};
+use lowmist::{TintedGlassPlugins, plugins::schematic::LoadedSchematic};
 
 fn main() -> Result<()> {
     App::new()
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
 
 fn drag_and_drop(
     mut events: MessageReader<FileDragAndDrop>,
-    mut schematic_handle: ResMut<SchematicHandle>,
+    mut loaded_schem: ResMut<LoadedSchematic>,
     asset_server: Res<AssetServer>,
 ) -> Result<()> {
     let Some(event) = events.read().last() else {
@@ -40,7 +40,7 @@ fn drag_and_drop(
         };
 
         info!("Loading schematic: {}", path);
-        schematic_handle.0 = asset_server.load(path);
+        loaded_schem.0 = asset_server.load(path);
     }
 
     Ok(())
