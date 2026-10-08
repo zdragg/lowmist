@@ -3619,6 +3619,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
+name = "lowmist"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_web_file_drop",
+ "itertools 0.15.0",
+ "log",
+ "lowmist-schematic",
+]
+
+[[package]]
+name = "lowmist-schematic"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "clap",
+ "fastnbt",
+ "flate2",
+ "glam",
+ "indexmap",
+ "itertools 0.15.0",
+ "jiff",
+ "serde",
+ "snafu",
+]
+
+[[package]]
 name = "mach2"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5211,33 +5238,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ad99c4c6d32803332c548b1af0540b357b3f5fc0be8f6c6bfe8b2e6ae784070"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "tintedglass-model"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "clap",
- "fastnbt",
- "flate2",
- "glam",
- "indexmap",
- "itertools 0.15.0",
- "jiff",
- "serde",
- "snafu",
-]
-
-[[package]]
-name = "tintedglass-renderer"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_web_file_drop",
- "itertools 0.15.0",
- "log",
- "tintedglass-model",
 ]
 
 [[package]]

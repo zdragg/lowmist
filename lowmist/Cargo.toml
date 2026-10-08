@@ -1,5 +1,5 @@
 [package]
-name = "tintedglass-renderer"
+name = "lowmist"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,4 +8,4 @@ bevy = { version = "0.19.1", features = ["bevy_dev_tools", "debug", "dynamic_lin
 bevy_web_file_drop = "0.4.0"
 itertools.workspace = true
 log = { version = "0.4.34" }
-tintedglass-model.workspace = true
+lowmist-schematic.workspace = true
