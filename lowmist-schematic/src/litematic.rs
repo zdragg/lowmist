@@ -118,10 +118,8 @@ impl Litematic {
             .enumerate()
             .map(|(i, current)| {
                 // Take all regions before this one that intersects
-                let prev_intersects: Vec<_> = self
-                    .regions
-                    .iter()
-                    .map(|(_, prev)| prev)
+                let prev_intersects: Vec<_> = regions
+                    .clone()
                     .take(i)
                     .filter(|prev| current.intersects(prev))
                     .collect();
