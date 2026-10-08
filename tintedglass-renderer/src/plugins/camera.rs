@@ -27,13 +27,10 @@ fn spawn_camera(mut commands: Commands) {
         OcclusionCulling,
         Msaa::Off,
         Smaa::default(),
-        children![
-            DirectionalLight {
-                illuminance: 5000.0,
-                ..default()
-            },
-            Transform::IDENTITY
-        ],
+        children![DirectionalLight {
+            illuminance: 5000.0,
+            ..default()
+        },],
     ));
 }
 
@@ -50,11 +47,11 @@ pub struct MinecraftCamera {
 impl Default for MinecraftCamera {
     fn default() -> Self {
         Self {
-            position: Vec3::ZERO,
+            position: Vec3::new(-6., 2., -4.),
             velocity: Vec3::ZERO,
-            max_speed: 11.1,
-            yaw: 0.0,
-            pitch: 0.0,
+            max_speed: 22.2,
+            yaw: -3. * std::f32::consts::FRAC_PI_4,
+            pitch: 0.,
         }
     }
 }
@@ -66,7 +63,7 @@ const DRAG: Vec3 = Vec3::new(0.91, 0.6, 0.91);
 // Vertical speed is 0.675x of horizontal speed.
 const SPEED_RATIO: Vec3 = Vec3::new(1.0, 0.675, 1.0);
 
-const TURN_SENSITIVITY: f32 = 0.005;
+const TURN_SENSITIVITY: f32 = 0.002;
 const MIN_SPEED: f32 = 0.5;
 const MAX_SPEED: f32 = 1000.0;
 const WHEEL_SCROLL_SENSITIVITY: f32 = 0.12;

@@ -12,6 +12,5 @@ glam = { version = "0.32.1", features = ["serde"] }
 indexmap = "2.14.2"
 itertools.workspace = true
 jiff = { version = "0.2.37", features = ["serde"] }
-rand = "0.10.3"
 serde = "1.0.229"
 snafu.workspace = true
