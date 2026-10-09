@@ -1,5 +1,4 @@
 mod regions;
-use fastnbt::from_bytes;
 use flate2::read::GzDecoder;
 use glam::IVec3;
 use indexmap::IndexSet;
@@ -28,6 +27,7 @@ impl BlockId {
 }
 
 /// Reference: <https://github.com/sakura-ryoko/litematica/blob/f7ac844c8134745cd89a6d9690cf3c753fe57465/src/main/java/fi/dy/masa/litematica/schematic/LitematicaSchematic.java#L1702>
+///
 /// This parser does not support version 1.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -77,15 +77,10 @@ pub enum Error {
 impl Litematic {
     /// Parses any [`Read`] that represents a .litematic file and returns [`Litematic`].
     pub fn parse(bytes: impl Read) -> Result<Self, Error> {
-        let mut decoder = GzDecoder::new(bytes);
-
-        let mut data = vec![];
-        decoder.read_to_end(&mut data).context(FileReadSnafu)?;
-
-        let schematic_result: Result<Litematic, _> = from_bytes(data.as_slice());
+        let schematic_result: Result<Litematic, _> = fastnbt::from_reader(GzDecoder::new(bytes));
         let mut schematic = schematic_result.context(ParseSchematicSnafu)?;
 
-        schematic.build_global_block_palette()?;
+        schematic.initialize_regions()?;
 
         Ok(schematic)
     }
@@ -171,8 +166,11 @@ impl Litematic {
             .expect("every BlockId should always have a corresponding BlockStatePaletteEntry")
     }
 
-    /// Builds the globally used, deduplicated block palette.
-    pub(crate) fn build_global_block_palette(&mut self) -> Result<(), crate::Error> {
+    /// Initializes each region by:
+    /// - Building the globally used, deduplicated block palette.
+    /// - Building the global palette to local palette index map.
+    /// - Calculating the bits per palette entry.
+    pub(crate) fn initialize_regions(&mut self) -> Result<(), crate::Error> {
         if !self.global_block_state_palette.is_empty() {
             panic!("global palette already built")
         }
@@ -201,6 +199,16 @@ impl Litematic {
                 let id = BlockId(u16::try_from(global_index).context(PaletteOverflowSnafu)?);
                 region.local_to_global.push(id);
             }
+
+            // Calculate bits per palette.
+            // Bits used per palette entry is equal to the shortest bit length required
+            // to store the index of the final palette entry.
+            // Exception: each entry needs at least 2 bits.
+            // e.g. 20 entries total -> 5 bits per entry (19 -> 10011, needs 5 bits).
+            // e.g. 1 entry total -> 2 bits per entry anyway.
+            region.bits_per_palette_entry = 2
+                .max(i32::BITS - (region.block_state_palette.len() as i32 - 1).leading_zeros())
+                as usize;
         }
         Ok(())
     }
@@ -210,5 +218,14 @@ impl Litematic {
             .iter()
             .enumerate()
             .map(|(id, entry)| (BlockId(id as u16), entry))
+    }
+
+    // Returns an iterator over every chunk position with at least one block
+    pub fn chunk_positions(&self) -> impl Iterator<Item = IVec3> {
+        let [min_x, min_y, min_z] = self.min_corner().div_euclid(IVec3::splat(16)).to_array();
+        let [max_x, max_y, max_z] = self.max_corner().div_euclid(IVec3::splat(16)).to_array();
+
+        itertools::iproduct!(min_y..=max_y, min_z..=max_z, min_x..=max_x)
+            .map(|(y, z, x)| IVec3::from_array([x, y, z]))
     }
 }

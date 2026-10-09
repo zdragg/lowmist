@@ -7,9 +7,9 @@ pub use crate::plugins::{
     camera::MinecraftCameraPlugin, grid::ChunkGridPlugin, schematic::SchematicPlugin,
 };
 
-pub struct TintedGlassPlugins;
+pub struct LowmistPlugins;
 
-impl PluginGroup for TintedGlassPlugins {
+impl PluginGroup for LowmistPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(SchematicPlugin)

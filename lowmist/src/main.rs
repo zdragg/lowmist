@@ -1,9 +1,8 @@
 use bevy::{
     asset::{AssetMetaCheck, UnapprovedPathMode},
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
 };
-use lowmist::{TintedGlassPlugins, plugins::schematic::LoadedSchematic};
+use lowmist::{LowmistPlugins, plugins::schematic::LoadedSchematic};
 
 fn main() -> Result<()> {
     App::new()
@@ -14,9 +13,9 @@ fn main() -> Result<()> {
                 meta_check: AssetMetaCheck::Never,
                 ..default()
             }),
-            FrameTimeDiagnosticsPlugin::default(),
-            LogDiagnosticsPlugin::default(),
-            TintedGlassPlugins,
+            // diagnostic::FrameTimeDiagnosticsPlugin::default(),
+            // diagnostic::LogDiagnosticsPlugin::default(),
+            LowmistPlugins,
         ))
         .add_systems(Update, drag_and_drop)
         .run();

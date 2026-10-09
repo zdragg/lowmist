@@ -3,10 +3,18 @@ name = "lowmist"
 version = "0.1.0"
 edition = "2024"
 
+[package.metadata.bevy_cli.unstable]
+web-multi-threading = true
+
 [dependencies]
 bevy = { version = "0.19.1", features = ["bevy_dev_tools", "debug", "dynamic_linking", "webgpu"] }
 bevy_web_file_drop = "0.4.0"
+flume = "0.12.0"
 itertools.workspace = true
 log = { version = "0.4.34" }
 lowmist-schematic.workspace = true
 voxel-traversal = { version = "0.4.0", features = ["glam"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+flume = { version = "0.12.0", features = ["spin"] }  # Atomic waiting not supported, use spinlock
+wasm_thread = "0.3"  # Used for asynchronous chunk meshing
