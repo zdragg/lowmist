@@ -39,6 +39,9 @@ pub struct Region {
     /// Note: not part of the Litematica schema.
     #[serde(skip)]
     pub(crate) local_to_global: Vec<BlockId>,
+
+    #[serde(skip)]
+    pub(crate) bits_per_palette_entry: usize,
 }
 
 #[derive(Debug, Deserialize, Hash, PartialEq, Eq, Clone)]
@@ -61,7 +64,7 @@ impl Region {
     /// Returns None if invalid position coordinates are provided.
     pub fn block_at_local(&self, local_pos: IVec3) -> Option<BlockId> {
         let slot = self.flatten_coords(local_pos)?;
-        Some(self.get_palette_id_at(slot))
+        Some(self.id_at(slot))
     }
 
     /// Takes **global** position and returns the corresponding block palette id.
@@ -177,20 +180,13 @@ impl Region {
     /// Find the palette index that provided slot in the packed bits represents,
     /// then return the palette entry that the palette index points at.
     /// Invalid slots and invalid palette index returns `minecraft:air`.
-    pub fn get_palette_id_at(&self, slot: usize) -> BlockId {
-        // Bits used per palette entry is equal to the shortest bit length required
-        // to store the index of the final palette entry.
-        // Exception: each entry needs at least 2 bits.
-        // e.g. 20 entries total -> 5 bits per entry (19 -> 10011, needs 5 bits).
-        // e.g. 1 entry total -> 2 bits per entry anyway.
-        let bits_per_slot =
-            2.max(i32::BITS - (self.block_state_palette.len() as i32 - 1).leading_zeros()) as usize;
-
+    pub fn id_at(&self, slot: usize) -> BlockId {
         // Turn the block states, deref coerced into &[i64] then cast into &[u64],
         // into a contiguous bit slice.
         let words: &[u64] = bytemuck::cast_slice(&self.block_states);
 
-        let Some(number) = Self::get_within_packed_bits(slot, bits_per_slot, words) else {
+        let Some(number) = Self::get_within_packed_bits(slot, self.bits_per_palette_entry, words)
+        else {
             // Corrupted blockstate
             return BlockId::AIR;
         };
@@ -202,14 +198,18 @@ impl Region {
             .unwrap_or(BlockId::AIR)
     }
 
-    fn get_within_packed_bits(slot: usize, bits_per_slot: usize, bytes: &[u64]) -> Option<u64> {
-        let start = slot * bits_per_slot; // The starting bit of the number, inclusive
+    fn get_within_packed_bits(
+        slot: usize,
+        bits_per_palette_entry: usize,
+        bytes: &[u64],
+    ) -> Option<u64> {
+        let start = slot * bits_per_palette_entry; // The starting bit of the number, inclusive
         let word_index = start / 64; // words[word_index]
         let offset = start % 64; // Which bit within words[word_index]
 
-        let fits_in_one_word = offset + bits_per_slot <= 64;
+        let fits_in_one_word = offset + bits_per_palette_entry <= 64;
 
-        let mask: u64 = (0b1 << bits_per_slot) - 1; // e.g. if 5 bits per slot, then mask is 0b0000...00011111
+        let mask: u64 = (0b1 << bits_per_palette_entry) - 1; // e.g. if 5 bits per slot, then mask is 0b0000...00011111
 
         if fits_in_one_word {
             Some((bytes.get(word_index)? >> offset) & mask)

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 bytemuck = "1.25.2"
 clap.workspace = true
-fastnbt = "2.6.3"
+fastnbt = { git = "https://github.com/zdragg/fastnbt" }
 flate2 = "1.1.10"
 glam = { version = "0.32.1", features = ["serde"] }
 indexmap = "2.14.2"
