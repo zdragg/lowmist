@@ -70,8 +70,6 @@ pub enum Error {
         display("More than u16::MAX global palette entries created")
     )]
     PaletteOverflow { source: std::num::TryFromIntError },
-    #[snafu(display("Could not read file bytes"))]
-    FileRead { source: std::io::Error },
 }
 
 impl Litematic {
