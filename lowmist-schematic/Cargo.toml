@@ -8,7 +8,7 @@ bytemuck = "1.25.2"
 clap.workspace = true
 fastnbt = { git = "https://github.com/zdragg/fastnbt" }
 flate2 = "1.1.10"
-glam = { version = "0.32.1", features = ["serde"] }
+glam.workspace = true
 indexmap = "2.14.2"
 itertools.workspace = true
 jiff = { version = "0.2.37", features = ["serde"] }
