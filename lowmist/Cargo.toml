@@ -7,13 +7,14 @@ edition = "2024"
 web-multi-threading = true
 
 [dependencies]
-bevy = { version = "0.19.1", features = ["bevy_dev_tools", "debug", "dynamic_linking", "webgpu"] }
-bevy_web_file_drop = "0.4.0"
+bevy = { version = "0.20.0", features = ["debug", "dynamic_linking", "render_dev_tools", "webgpu"] }
+bevy_web_file_drop = "0.5.0"
 flume = "0.12.0"
+glam.workspace = true
 itertools.workspace = true
 log = { version = "0.4.34" }
 lowmist-schematic.workspace = true
-voxel-traversal = { version = "0.4.0", features = ["glam"] }
+voxel-traversal = "0.4.0"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 flume = { version = "0.12.0", features = ["spin"] }  # Atomic waiting not supported, use spinlock

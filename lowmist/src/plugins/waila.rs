@@ -60,11 +60,13 @@ fn find_pointed_block(
     let end_pos = start_pos + direction * REACH;
 
     // Find the first non air block on the ray from start_pos to end_pos
-    let block = VoxelRaycast::new(start_pos, end_pos).find_map(|((x, y, z), _normals)| {
-        let pos = IVec3::from_array([x, y, z]);
-        let block_id = schem.block_at(pos)?;
-        (!block_id.is_air()).then_some((pos, schem.palette_entry(block_id).clone()))
-    });
+    let block = VoxelRaycast::new(start_pos.to_array(), end_pos.to_array()).find_map(
+        |((x, y, z), _normals)| {
+            let pos = IVec3::from_array([x, y, z]);
+            let block_id = schem.block_at(pos)?;
+            (!block_id.is_air()).then_some((pos, schem.palette_entry(block_id).clone()))
+        },
+    );
 
     pointed_block.set_if_neq(PointedBlock(block));
 }

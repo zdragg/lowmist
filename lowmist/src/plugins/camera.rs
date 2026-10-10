@@ -81,7 +81,7 @@ impl MinecraftCamera {
         self.position = center_pos + direction * radius * 1.5;
 
         // After moving toward that direction, look back toward the center position
-        let rotation = Quat::look_to_rh(-direction, Vec3::Y).inverse();
+        let rotation = glam::camera::rh::view::look_to_quat(-direction, Vec3::Y).inverse();
         let (yaw, pitch, _roll) = rotation.to_euler(EulerRot::YXZ);
         self.yaw = yaw;
         self.pitch = pitch;
