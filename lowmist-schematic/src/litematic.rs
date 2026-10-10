@@ -11,6 +11,8 @@ use std::{collections::BTreeMap, io::Read};
 
 use serde::{Deserialize, Deserializer};
 
+use crate::update::MAPPINGS;
+
 /// Newtype that represents a block palette ID, used in the schematic-level
 /// deduplicated block palette.
 #[derive(Debug, PartialEq, Eq, Hash, Deserialize, Clone, Copy)]
@@ -28,7 +30,7 @@ impl BlockId {
 
 /// Reference: <https://github.com/sakura-ryoko/litematica/blob/f7ac844c8134745cd89a6d9690cf3c753fe57465/src/main/java/fi/dy/masa/litematica/schematic/LitematicaSchematic.java#L1702>
 ///
-/// This parser does not support version 1.
+/// This parser does not support versions 1-4.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Litematic {
@@ -37,6 +39,7 @@ pub struct Litematic {
     #[serde(default)]
     pub sub_version: i32,
     /// [https://minecraft.wiki/w/Data_version](https://minecraft.wiki/w/Data_version)
+    #[serde(default = "default_minecraft_data_version")]
     pub minecraft_data_version: i32,
     pub metadata: Metadata,
     pub regions: BTreeMap<String, Region>,
@@ -49,14 +52,33 @@ pub struct Litematic {
     pub(crate) global_block_state_palette: IndexSet<BlockStatePaletteEntry>,
 }
 
-/// Serde deserializer that only allows versions 2 to 7.
+/// [Commit: schema version updated to v5 in 1.13.2 update](https://github.com/maruohon/litematica/commit/80d097020903f50e04eb7936a6741bacce0b814c)
+///
+/// [Commit: minecraft_data_version field added to 1.13.2 build](https://github.com/maruohon/litematica/commit/ad7c416101de7bb0cdb3287ec332879aa4ebba72)
+///
+/// Therefore, the only legitimate Litematica schematics that:
+///
+/// - has schema `version` >= 5
+/// - does not have `minecraft_data_version`
+///
+/// are produced on a couple 1.13.2 Litematica builds, with should have data version 1631.
+///
+/// Note: the number 1631 was hardcoded for several versions until the bug was fixed in
+/// [this commit](https://github.com/maruohon/litematica/commit/d817368bb803404de09bc3f00d318e174df7c2b9) for 1.15.
+/// Due to this bug, 1.13, 1.14 and a some 1.15 schematics will all show data version 1631.
+/// This may cause some unwanted consequences.
+fn default_minecraft_data_version() -> i32 {
+    1631
+}
+
+/// Serde deserializer that only allows versions 5 to 7.
 fn version_blocker<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
     let v = i32::deserialize(de)?;
     match v {
-        2..=7 => Ok(v),
+        5..=7 => Ok(v),
         _ => Err(serde::de::Error::invalid_value(
             serde::de::Unexpected::Signed(v.into()),
-            &"schematic version 2 to 7",
+            &"schematic version 5 to 7",
         )),
     }
 }
@@ -191,7 +213,10 @@ impl Litematic {
             });
 
         for region in self.regions.values_mut() {
-            for entry in &region.block_state_palette {
+            for entry in &mut region.block_state_palette {
+                // Update each entry
+                MAPPINGS.update(self.minecraft_data_version, entry);
+
                 let (global_index, _exists) =
                     self.global_block_state_palette.insert_full(entry.clone());
                 let id = BlockId(u16::try_from(global_index).context(PaletteOverflowSnafu)?);

@@ -7,12 +7,12 @@ edition = "2024"
 web-multi-threading = true
 
 [dependencies]
-bevy = { version = "0.20.0", features = ["debug", "dynamic_linking", "render_dev_tools", "webgpu"] }
-bevy_web_file_drop = "0.5.0"
+bevy = { version = "0.20.0", features = ["debug", "dynamic_linking", "https", "render_dev_tools", "webgpu"] }
+bevy_web_file_drop = { git = "https://github.com/zdragg/bevy_web_file_drop", branch = "uses-git-blob-loader" }
 flume = "0.12.0"
 glam.workspace = true
 itertools.workspace = true
-log = { version = "0.4.34" }
+log = "0.4.34"
 lowmist-schematic.workspace = true
 voxel-traversal = "0.4.0"
 
