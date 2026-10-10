@@ -101,9 +101,9 @@ const CHANNEL_BOUND: usize = 64;
 
 /// Spawns background meshing threads that take jobs and return meshes
 fn spawn_threads(mut commands: Commands) {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     use std::thread;
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     use wasm_thread as thread;
 
     // Unbounded because main thread cannot wait for workers to receive
