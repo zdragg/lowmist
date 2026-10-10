@@ -23,7 +23,9 @@ pub struct Region {
     pub block_states: LongArray,
     pub block_state_palette: Vec<BlockStatePaletteEntry>,
 
+    #[serde(default)]
     pub entities: Vec<Entity>,
+    #[serde(default)]
     pub tile_entities: Vec<TileEntity>,
 
     // Added in Litematica v3
