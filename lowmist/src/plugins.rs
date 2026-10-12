@@ -1,4 +1,4 @@
 pub mod camera;
 pub mod grid;
-pub mod schematic;
+pub mod blocks;
 pub mod waila;

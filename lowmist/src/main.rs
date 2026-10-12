@@ -2,9 +2,9 @@ use bevy::{
     asset::{AssetMetaCheck, UnapprovedPathMode},
     prelude::*,
 };
-use lowmist::{LowmistPlugins, plugins::schematic::LoadedSchematic};
+use lowmist::{LowmistPlugins, plugins::blocks::schematic::LoadedSchematic};
 
-fn main() -> Result<()> {
+fn main() -> Result {
     App::new()
         .add_plugins((
             bevy_web_file_drop::WebFileDropPlugin, // registers a new asset source, place before AssetPlugin
@@ -27,7 +27,7 @@ fn drag_and_drop(
     mut events: MessageReader<FileDragAndDrop>,
     mut loaded_schem: ResMut<LoadedSchematic>,
     asset_server: Res<AssetServer>,
-) -> Result<()> {
+) -> Result {
     let Some(event) = events.read().last() else {
         return Ok(());
     };

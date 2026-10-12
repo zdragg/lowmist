@@ -4,7 +4,7 @@ use bevy::{app::PluginGroupBuilder, prelude::*};
 
 use crate::plugins::waila::WailaPlugin;
 pub use crate::plugins::{
-    camera::MinecraftCameraPlugin, grid::ChunkGridPlugin, schematic::SchematicPlugin,
+    blocks::BlocksPlugin, camera::MinecraftCameraPlugin, grid::ChunkGridPlugin,
 };
 
 pub struct LowmistPlugins;
@@ -12,7 +12,7 @@ pub struct LowmistPlugins;
 impl PluginGroup for LowmistPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(SchematicPlugin)
+            .add(BlocksPlugin)
             .add(MinecraftCameraPlugin)
             .add(ChunkGridPlugin)
             .add(WailaPlugin)

@@ -7,7 +7,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused},
 };
 
-use crate::plugins::schematic::NewSchematicStartedLoading;
+use crate::plugins::blocks::LoadingNewBlocks;
 
 pub struct MinecraftCameraPlugin;
 
@@ -125,7 +125,7 @@ impl MinecraftCamera {
 // Handles input + applies MinecraftCamera to Transform
 fn control(
     time: Res<Time>,
-    mut schematic_spawned: MessageReader<NewSchematicStartedLoading>,
+    mut schematic_spawned: MessageReader<LoadingNewBlocks>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     mouse_motion: Res<AccumulatedMouseMotion>,

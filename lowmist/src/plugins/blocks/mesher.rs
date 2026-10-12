@@ -40,6 +40,8 @@ pub(super) fn build_chunk_mesh(schematic: &Litematic, chunk_pos: IVec3) -> Optio
             continue; // Air
         }
 
+        let palette = schematic.palette_entry(block_id);
+
         for face in Face::FACES {
             let neighbor_pos = pos + face.neighbor_offset();
             if let Some(neighbor_id) = schematic.block_at(neighbor_pos)

@@ -3,8 +3,11 @@ use lowmist_schematic::BlockStatePaletteEntry;
 use voxel_traversal::VoxelRaycast;
 
 use crate::plugins::{
+    blocks::{
+        LoadingNewBlocks,
+        schematic::{LoadedSchematic, SchematicAsset},
+    },
     camera::MinecraftCamera,
-    schematic::{LoadedSchematic, NewSchematicStartedLoading, SchematicAsset},
 };
 
 pub struct WailaPlugin;
@@ -36,7 +39,7 @@ fn find_pointed_block(
     schem_handle: Res<LoadedSchematic>,
     schem_asset_storage: Res<Assets<SchematicAsset>>,
     camera: Option<Single<Ref<Transform>, With<MinecraftCamera>>>,
-    mut events: MessageReader<NewSchematicStartedLoading>,
+    mut events: MessageReader<LoadingNewBlocks>,
 
     mut pointed_block: ResMut<PointedBlock>,
 ) {
