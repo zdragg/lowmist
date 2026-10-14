@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::BlockStatePaletteEntry;
 
-pub(crate) static MAPPINGS: LazyLock<UpdateMappings> = LazyLock::new(|| UpdateMappings::get());
+pub(crate) static MAPPINGS: LazyLock<UpdateMappings> = LazyLock::new(UpdateMappings::get);
 
 pub struct UpdateMappings {
     steps: Vec<Step>,
@@ -36,6 +36,7 @@ impl UpdateMappings {
             .steps
             .partition_point(|step| step.data_version <= data_version);
         for step in &self.steps[starting_step_index..] {
+            #[allow(clippy::collapsible_if)]
             if !palette.properties.is_empty() {
                 if let Some(rule) = step.with_props_rules.get(palette) {
                     rule.apply(palette);

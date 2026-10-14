@@ -7,7 +7,9 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub(crate) struct TextureMcmeta {
     /// Contains the animation properties.
-    animation: Animation,
+    animation: Option<Animation>,
+    /// Contains information about how to render the texture.
+    texture: Option<Texture>,
 }
 
 #[derive(Deserialize)]
@@ -33,6 +35,7 @@ pub(crate) struct Animation {
     #[serde(default = "default_frametime")]
     pub(crate) frametime: NonZeroU32,
 
+    #[serde(default)]
     /// Contains a list of frames.
     /// If not specified, all frames are displayed first to last.
     pub(crate) frames: Vec<Frame>,
@@ -52,8 +55,39 @@ pub(crate) enum Frame {
     TimeOverrided {
         /// The index of a frame, with the first frame being 0.
         index: u32,
+
         /// The time in ticks to show this frame, overriding frametime above.
         #[serde(default = "default_frametime")]
         time: NonZeroU32,
     },
+}
+
+#[derive(Deserialize)]
+pub(crate) struct Texture {
+    /// Causes the texture to blur when viewed from close up.
+    /// Defaults to false.
+    #[serde(default)]
+    blur: bool,
+
+    /// Causes the texture to stretch instead of tiling in cases where it otherwise would, such as on the shadow.
+    /// Defaults to false.
+    #[serde(default)]
+    clamp: bool,
+
+    #[serde(default)]
+    mipmap_strategy: MipmapStrategy,
+
+    #[serde(default)]
+    alpha_cutoff_bias: f32,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum MipmapStrategy {
+    #[default]
+    Auto,
+    Mean,
+    Cutout,
+    StrictCutout,
+    DarkCutout,
 }

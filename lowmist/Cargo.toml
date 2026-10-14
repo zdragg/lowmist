@@ -12,6 +12,7 @@ bevy = { version = "0.20.0", features = [
   "dynamic_linking",
   "https",
   "render_dev_tools",
+  "web_asset_cache",
   "webgpu"
 ] }
 bevy_web_file_drop = "0.5.0"

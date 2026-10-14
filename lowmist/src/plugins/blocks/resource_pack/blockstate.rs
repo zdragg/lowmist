@@ -106,10 +106,7 @@ pub(crate) struct Terms {
 impl TryFrom<String> for Terms {
     type Error = String;
     fn try_from(terms_str: String) -> Result<Self, Self::Error> {
-        let terms: Result<Vec<_>, Self::Error> = terms_str
-            .split('|')
-            .map(|term_str| Term::try_from(term_str))
-            .collect();
+        let terms: Result<Vec<_>, Self::Error> = terms_str.split('|').map(Term::try_from).collect();
         Ok(Terms { entries: terms? })
     }
 }

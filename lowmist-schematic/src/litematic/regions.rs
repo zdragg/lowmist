@@ -158,8 +158,6 @@ impl Region {
         local_pos + self.min_corner()
     }
 
-    /// Translates coordinates from local to global position.
-
     /// Takes the local position and flattens it to a single number
     /// that represents the **slot** of the target block within the packed bits.
     ///

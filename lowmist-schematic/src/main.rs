@@ -43,7 +43,7 @@ fn main() -> Result<(), Error> {
         schematic.minecraft_data_version
     );
 
-    println!("");
+    println!();
 
     println!("Name: {:?}", schematic.metadata.name);
     println!("Author: {:?}", schematic.metadata.author);
@@ -52,7 +52,7 @@ fn main() -> Result<(), Error> {
     println!("Time Modified: {:?}", schematic.metadata.time_modified);
     println!("Enclosing Size: {:?}", schematic.metadata.enclosing_size);
 
-    println!("");
+    println!();
 
     println!("Region count: {}", schematic.regions.len());
 
@@ -77,8 +77,8 @@ fn main() -> Result<(), Error> {
         println!("At {id:?}, there is {entry:?}");
     }
 
-    println!("");
-    for (name, _region) in &schematic.regions {
+    println!();
+    for name in schematic.regions.keys() {
         println!("There exists region: {name}");
     }
     Ok(())

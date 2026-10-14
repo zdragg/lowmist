@@ -54,7 +54,7 @@ pub(super) fn build_chunk_mesh(schematic: &Litematic, chunk_pos: IVec3) -> Optio
 
             // Append the 4 corner positions of this face, 4 [f32; 3] per face
 
-            positions.extend(face.corners().into_iter().map(|rel_corner_pos| {
+            positions.extend(face.corners().iter().map(|rel_corner_pos| {
                 let corner_pos = rel_corner_pos + rel_chunk_pos.as_vec3();
                 corner_pos.to_array()
             }));

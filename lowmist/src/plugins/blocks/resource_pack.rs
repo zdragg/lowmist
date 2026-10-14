@@ -96,7 +96,7 @@ impl AssetLoader for ResourcePackLoader {
                 let mut buf = Vec::with_capacity(entry.size() as usize);
                 entry.read_to_end(&mut buf)?;
                 let blockstate: blockstate::Blockstate =
-                    serde_json::from_slice(&buf).map_err(|e| format!("{key}: {e}"))?;
+                    serde_json::from_slice(&buf).map_err(|e| format!("blockstate {key}: {e}"))?;
 
                 blockstates.insert(key, blockstate);
             } else if let ["assets", namespace, "models", rest] = &path_parts[..]
@@ -110,7 +110,7 @@ impl AssetLoader for ResourcePackLoader {
                 let mut buf = Vec::with_capacity(entry.size() as usize);
                 entry.read_to_end(&mut buf)?;
                 let model: model::Model =
-                    serde_json::from_slice(&buf).map_err(|e| format!("{key}: {e}"))?;
+                    serde_json::from_slice(&buf).map_err(|e| format!("model {key}: {e}"))?;
 
                 models.insert(key, model);
             } else if let ["assets", namespace, "textures", rest] = &path_parts[..] {
@@ -133,7 +133,8 @@ impl AssetLoader for ResourcePackLoader {
                     let mut buf = Vec::with_capacity(entry.size() as usize);
                     entry.read_to_end(&mut buf)?;
                     let texture_mcmeta: texture_mcmeta::TextureMcmeta =
-                        serde_json::from_slice(&buf).map_err(|e| format!("{key}: {e}"))?;
+                        serde_json::from_slice(&buf)
+                            .map_err(|e| format!("texture mcmeta {key}: {e}"))?;
 
                     textures_mcmeta.insert(key, texture_mcmeta);
                 }

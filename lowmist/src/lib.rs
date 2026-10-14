@@ -1,10 +1,12 @@
+#![forbid(unsafe_code)]
+#![allow(clippy::too_many_arguments)]
+
 pub mod plugins;
 
 use bevy::{app::PluginGroupBuilder, prelude::*};
 
-use crate::plugins::waila::WailaPlugin;
 pub use crate::plugins::{
-    blocks::BlocksPlugin, camera::MinecraftCameraPlugin, grid::ChunkGridPlugin,
+    blocks::BlocksPlugin, camera::MinecraftCameraPlugin, grid::ChunkGridPlugin, waila::WailaPlugin,
 };
 
 pub struct LowmistPlugins;
