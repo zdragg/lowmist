@@ -638,7 +638,8 @@ dependencies = [
 [[package]]
 name = "bevy_blob_loader"
 version = "0.5.0"
-source = "git+https://github.com/zdragg/bevy_blob_loader#ca3d81ac073e5e87784a7d464382a74e0010e49d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb43db87a5b9f826b77850577e5f189d2bd56e22f9dbd3c8702cf49f7fcd644c"
 dependencies = [
  "base64 0.22.1",
  "bevy",
@@ -1943,7 +1944,8 @@ dependencies = [
 [[package]]
 name = "bevy_web_file_drop"
 version = "0.5.0"
-source = "git+https://github.com/zdragg/bevy_web_file_drop?branch=uses-git-blob-loader#1005f490a48cc8809fd48bd2551d53f3ff51373e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dafaaf85265d92b2ee4c22ca66d1cddeb0442e740ab6ab8b800b4e7b9834fb02"
 dependencies = [
  "bevy",
  "bevy_blob_loader",

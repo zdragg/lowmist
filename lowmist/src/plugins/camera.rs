@@ -63,10 +63,10 @@ const DRAG: Vec3 = Vec3::new(0.91, 0.6, 0.91);
 // Vertical speed is 0.675x of horizontal speed.
 const SPEED_RATIO: Vec3 = Vec3::new(1.0, 0.675, 1.0);
 
-const TURN_SENSITIVITY: f32 = 0.002;
+const TURN_SENSITIVITY: f32 = 0.001;
 const MIN_SPEED: f32 = 0.5;
 const MAX_SPEED: f32 = 1000.0;
-const WHEEL_SCROLL_SENSITIVITY: f32 = 0.12;
+const WHEEL_SCROLL_SENSITIVITY: f32 = 0.15;
 const TRACKPAD_SCROLL_SENSITIVITY: f32 = 0.004;
 
 impl MinecraftCamera {
