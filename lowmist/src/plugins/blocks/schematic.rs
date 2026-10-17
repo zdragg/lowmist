@@ -4,14 +4,14 @@
 //! The code checks LoadedSchematic against the actually rendered schematic,
 //! and renders your new one if they don't match.
 //!
-//! SchematicAsset: A wrapper around the actual Schematic struct that can be loaded
+//! Schematic: A wrapper around the actual Litematic struct that can be loaded
 //! as a bevy Asset.
 //!
-//! SchematicAssetLoader: A bevy struct that defines how to load bytes into a SchematicAsset.
+//! SchematicLoader: A bevy struct that defines how to load bytes into a SchematicAsset.
 //!
 //! Usage:
-//! Use Bevy's AssetServer to load a .litematic file into a Handle<SchematicAsset>.
-//! Then, store that Handle<SchematicAsset> into the LoadedSchematic resource to tell
+//! Use Bevy's AssetServer to load a .litematic file into a Handle<Schematic>.
+//! Then, store that Handle<Schematic> into the LoadedSchematic resource to tell
 //! the renderer that you want this schematic rendered.
 
 use std::sync::Arc;
@@ -27,25 +27,25 @@ pub(super) struct InnerSchematicPlugin;
 impl Plugin for InnerSchematicPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<LoadedSchematic>()
-            .init_asset::<SchematicAsset>()
-            .init_asset_loader::<SchematicAssetLoader>();
+            .init_asset::<Schematic>()
+            .init_asset_loader::<SchematicLoader>();
     }
 }
 
 #[derive(Asset, TypePath)]
-pub struct SchematicAsset(Arc<Litematic>);
+pub struct Schematic(Arc<Litematic>);
 
-impl SchematicAsset {
+impl Schematic {
     pub fn inner(&self) -> Arc<Litematic> {
         self.0.clone()
     }
 }
 
 #[derive(Default, TypePath)]
-struct SchematicAssetLoader;
+struct SchematicLoader;
 
-impl AssetLoader for SchematicAssetLoader {
-    type Asset = SchematicAsset;
+impl AssetLoader for SchematicLoader {
+    type Asset = Schematic;
     type Settings = ();
     type Error = BevyError;
 
@@ -58,7 +58,7 @@ impl AssetLoader for SchematicAssetLoader {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
         let schematic = Litematic::parse(&bytes[..])?;
-        Ok(SchematicAsset(Arc::new(schematic)))
+        Ok(Schematic(Arc::new(schematic)))
     }
 
     fn extensions(&self) -> &[&str] {
@@ -76,8 +76,8 @@ impl AssetLoader for SchematicAssetLoader {
 ///     mut loaded_handle_resource: ResMut<LoadedSchematic>,
 ///     asset_server: Res<AssetServer>
 /// ) {
-///     let schem_asset_path = todo!();
-///     loaded_handle_resource.0 = asset_server.load(schem_asset_path);
+///     let schem_path = todo!();
+///     loaded_handle_resource.0 = asset_server.load(schem_path);
 /// }
 /// ```
 ///
@@ -85,13 +85,13 @@ impl AssetLoader for SchematicAssetLoader {
 /// ```rust
 /// fn read_schematic(
 ///     loaded_handle_resource: Res<LoadedSchematic>,
-///     loaded_assets: Res<Assets<SchematicAsset>>,
+///     loaded_schems: Res<Assets<Schematic>>,
 /// ) {
 ///     let loaded_handle = &loaded_handle_resource.0;
-///     if let Some(loaded_asset) = loaded_assets.get(loaded_handle) {
+///     if let Some(loaded_schem) = loaded_assets.get(loaded_handle) {
 ///         todo!();
 ///     }
 /// }
 /// ```
 #[derive(Default, Resource)]
-pub struct LoadedSchematic(pub Handle<SchematicAsset>);
+pub struct LoadedSchematic(pub Handle<Schematic>);

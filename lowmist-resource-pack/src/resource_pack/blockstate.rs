@@ -2,13 +2,14 @@
 
 use std::num::NonZeroU32;
 
-use bevy::{platform::collections::HashMap, prelude::*};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
+use crate::resource_pack::{HashMap, ResourceLocation};
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum Blockstate {
+pub enum Blockstate {
     /// Holds the names of all the variants of the block.​
     /// ```jsonc
     /// {
@@ -42,20 +43,20 @@ pub(crate) enum Blockstate {
 /// }
 /// ```
 #[derive(Debug, Deserialize)]
-pub(crate) struct Selector {
+pub struct Selector {
     /// Determines the model(s) to apply and its properties.
     /// There can be one model or an array of models.
     /// If set to an array, the model is chosen randomly from the options given,
     /// with each option being specified in separate subsidiary [NBT Compound / JSON Object]-tags.
-    pub(crate) apply: OneOrManyVariants,
+    pub apply: OneOrManyVariants,
 
     /// A list of cases that have to be met for the model to be applied. If unset, the model always applies.
-    pub(crate) when: Option<Condition>,
+    pub when: Option<Condition>,
 }
 
 #[derive(Debug, Deserialize)]
 /// A list of cases that all have to match the block to return true.
-pub(crate) enum Condition {
+pub enum Condition {
     /// Matches if all of the contained cases return true. Cannot be set alongside other cases.
     /// ```jsonc
     /// {
@@ -99,8 +100,8 @@ pub(crate) enum Condition {
 /// ```
 #[derive(Debug, Deserialize)]
 #[serde(try_from = "String")]
-pub(crate) struct Terms {
-    entries: Vec<Term>,
+pub struct Terms {
+    pub entries: Vec<Term>,
 }
 
 impl TryFrom<String> for Terms {
@@ -115,9 +116,9 @@ impl TryFrom<String> for Terms {
 /// "!north"
 /// ```
 #[derive(Debug)]
-pub(crate) struct Term {
-    value: String,
-    negated: bool,
+pub struct Term {
+    pub value: String,
+    pub negated: bool,
 }
 
 impl TryFrom<&str> for Term {
@@ -139,7 +140,7 @@ impl TryFrom<&str> for Term {
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-pub(crate) enum OneOrManyVariants {
+pub enum OneOrManyVariants {
     /// ```jsonc
     /// {
     ///   /* Variant */
@@ -166,30 +167,30 @@ pub(crate) enum OneOrManyVariants {
 /// }
 /// ```
 #[derive(Debug, Deserialize)]
-pub(crate) struct Variant {
+pub struct Variant {
     /// Specifies the path to the model file of the block, in form of a resource location.
-    model: String,
+    pub model: ResourceLocation,
 
     /// Optional. Default: 0.
     /// Rotation of the model on the x-axis in increments of 90 degrees.
     #[serde(default)]
-    x: Rotation,
+    pub x: Rotation,
 
     /// Optional. Default: 0.
     /// Rotation of the model on the y-axis in increments of 90 degrees.
     #[serde(default)]
-    y: Rotation,
+    pub y: Rotation,
 
     /// Optional. Default: 0.
     /// Rotation of the model on the z-axis in increments of 90 degrees.
     #[serde(default)]
-    z: Rotation,
+    pub z: Rotation,
 
     /// Optional. Default: false.
     /// If set to true, locks the rotation of the texture of a block.
     /// This way the texture does not rotate with the block when using the x and y tags above.
     #[serde(default)]
-    uvlock: bool,
+    pub uvlock: bool,
 }
 
 /// ```jsonc
@@ -200,9 +201,9 @@ pub(crate) struct Variant {
 /// }
 /// ```
 #[derive(Debug, Deserialize)]
-pub(crate) struct WeightedVariant {
+pub struct WeightedVariant {
     #[serde(flatten)]
-    variant: Variant,
+    pub variant: Variant,
 
     /// Optional. Default: 1.
     /// If more than one model is used for the same variant, the probability is
@@ -213,7 +214,7 @@ pub(crate) struct WeightedVariant {
     /// each model being used would then be determined by dividing
     /// each weight by 4: 1/4, 1/4 and 2/4, or 25%, 25% and 50%, respectively.)
     #[serde(default = "default_weight")]
-    weight: NonZeroU32,
+    pub weight: NonZeroU32,
 }
 
 fn default_weight() -> NonZeroU32 {
@@ -222,7 +223,7 @@ fn default_weight() -> NonZeroU32 {
 
 #[derive(Debug, Default, Deserialize_repr)]
 #[repr(u16)]
-pub(crate) enum Rotation {
+pub enum Rotation {
     #[default]
     R0 = 0,
     R90 = 90,

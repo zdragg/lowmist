@@ -1,24 +1,14 @@
-//! A few types that handle the Minecraft Resource Pack.
+//! Minecraft Resource Pack handler.
 //!
-//! This file handles:
-//! - downloading the default resource pack from the internet,
-//! - parsing the files,
-//! - loading the parsed files into the asset server,
-//! - generating a new ModelBaker dynamically when loaded resource packs change.
-
-mod blockstate;
-mod model;
-mod texture_mcmeta;
-
-use std::io::{Cursor, Read};
+//! - downloads the default resource pack from the internet
+//! - parses the files using `lowmist-resource-pack`
+//! - loads the parsed files into the asset server
+//! - generates a new ModelBaker dynamically when loaded resource packs change
 
 use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
-    platform::collections::HashMap,
     prelude::*,
 };
-use vec1::smallvec_v1::SmallVec1;
-use zip::ZipArchive;
 
 const DEFAULT_RESOURCE_PACK_URL: &str = "https://cdn.jsdelivr.net/gh/zdragg/minecraft-java-default-resource-pack@26.3/DefaultResourcePack.zip";
 
@@ -37,11 +27,11 @@ impl Plugin for InnerMinecraftAssetPlugin {
 }
 
 #[derive(Resource)]
-struct ResourcePackStack(SmallVec1<[Handle<ResourcePack>; 1]>);
+struct ResourcePackStack(Vec<Handle<ResourcePack>>);
 
 impl ResourcePackStack {
     fn new(base: Handle<ResourcePack>) -> Self {
-        Self(SmallVec1::new(base))
+        Self(vec![base])
     }
 }
 
@@ -51,7 +41,13 @@ fn load_default_resource_pack(mut commands: Commands, asset_server: Res<AssetSer
 }
 
 #[derive(Asset, TypePath)]
-struct ResourcePack;
+pub struct ResourcePack(lowmist_resource_pack::ResourcePack);
+
+impl ResourcePack {
+    pub fn inner(&self) -> &lowmist_resource_pack::ResourcePack {
+        &self.0
+    }
+}
 
 #[derive(Default, TypePath)]
 struct ResourcePackLoader;
@@ -70,86 +66,15 @@ impl AssetLoader for ResourcePackLoader {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
 
-        let mut archive = ZipArchive::new(Cursor::new(buf))?;
+        let pack = lowmist_resource_pack::ResourcePack::load(&buf)?;
 
-        let mut blockstates = HashMap::new();
-        let mut models = HashMap::new();
-        let mut textures = HashMap::new();
-        let mut textures_mcmeta = HashMap::new();
-
-        for i in 0..archive.len() {
-            let mut entry = archive.by_index(i)?;
-            if !entry.is_file() {
-                continue;
-            }
-            let path = entry.name()?;
-            let path_parts: Vec<_> = path.splitn(4, '/').collect();
-
-            if let ["assets", namespace, "blockstates", rest] = &path_parts[..]
-                && let Some(name) = rest.strip_suffix(".json")
-            {
-                // path = assets/minecraft/blockstates/acacia_button.json
-                // namespace = minecraft
-                // name = acacia_button
-                let key = format!("{namespace}:{name}");
-
-                let mut buf = Vec::with_capacity(entry.size() as usize);
-                entry.read_to_end(&mut buf)?;
-                let blockstate: blockstate::Blockstate =
-                    serde_json::from_slice(&buf).map_err(|e| format!("blockstate {key}: {e}"))?;
-
-                blockstates.insert(key, blockstate);
-            } else if let ["assets", namespace, "models", rest] = &path_parts[..]
-                && let Some(name) = rest.strip_suffix(".json")
-            {
-                // path = assets/minecraft/models/block/acacia_button.json
-                // namespace = minecraft
-                // name = block/acacia_button
-                let key = format!("{namespace}:{name}");
-
-                let mut buf = Vec::with_capacity(entry.size() as usize);
-                entry.read_to_end(&mut buf)?;
-                let model: model::Model =
-                    serde_json::from_slice(&buf).map_err(|e| format!("model {key}: {e}"))?;
-
-                models.insert(key, model);
-            } else if let ["assets", namespace, "textures", rest] = &path_parts[..] {
-                if let Some(name) = rest.strip_suffix(".png") {
-                    // path = assets/minecraft/textures/block/acacia_leaves.png
-                    // namespace = minecraft
-                    // name = block/acacia_leaves
-                    let key = format!("{namespace}:{name}");
-
-                    let mut buf = Vec::with_capacity(entry.size() as usize);
-                    entry.read_to_end(&mut buf)?;
-
-                    textures.insert(key, buf);
-                } else if let Some(name) = rest.strip_suffix(".png.mcmeta") {
-                    // path = assets/minecraft/textures/block/acacia_leaves.png.mcmeta
-                    // namespace = minecraft
-                    // name = block/acacia_leaves
-                    let key = format!("{namespace}:{name}");
-
-                    let mut buf = Vec::with_capacity(entry.size() as usize);
-                    entry.read_to_end(&mut buf)?;
-                    let texture_mcmeta: texture_mcmeta::TextureMcmeta =
-                        serde_json::from_slice(&buf)
-                            .map_err(|e| format!("texture mcmeta {key}: {e}"))?;
-
-                    textures_mcmeta.insert(key, texture_mcmeta);
-                }
-            }
-        }
-
-        Ok(ResourcePack)
+        Ok(ResourcePack(pack))
     }
 
     fn extensions(&self) -> &[&str] {
         &["zip"]
     }
 }
-
-pub(crate) mod models {}
 
 #[derive(Resource, PartialEq)]
 struct ModelBaker;

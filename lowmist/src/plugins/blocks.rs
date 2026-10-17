@@ -1,5 +1,5 @@
 mod mesher;
-mod resource_pack;
+pub mod resource_pack;
 pub mod schematic;
 
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use lowmist_schematic::Litematic;
 
 use crate::plugins::blocks::{
     resource_pack::InnerMinecraftAssetPlugin,
-    schematic::{InnerSchematicPlugin, LoadedSchematic, SchematicAsset},
+    schematic::{InnerSchematicPlugin, LoadedSchematic, Schematic},
 };
 
 pub struct BlocksPlugin;
@@ -19,7 +19,7 @@ impl Plugin for BlocksPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(InnerSchematicPlugin)
             .add_plugins(InnerMinecraftAssetPlugin)
-            .add_message::<LoadingNewBlocks>()
+            .add_message::<NewBlocksLoadingMessage>()
             .add_systems(Startup, spawn_threads)
             .add_systems(
                 Update,
@@ -85,7 +85,7 @@ fn spawn_threads(mut commands: Commands) {
 //
 // If you want to get access to the schematic, do it through the LoadedSchematic Resource.
 #[derive(Component)]
-struct SchematicRoot(Handle<SchematicAsset>);
+struct SchematicRoot(Handle<Schematic>);
 
 #[derive(Component)]
 struct StandardMaterialHandle(Handle<StandardMaterial>);
@@ -103,7 +103,7 @@ impl ChunkEntities {
 ///
 /// Could be used to help Cameras initialize itself with a reasonable Transform.
 #[derive(Message)]
-pub struct LoadingNewBlocks {
+pub struct NewBlocksLoadingMessage {
     /// The schematic's corner with the smallest number on each axis
     pub min_corner: IVec3,
     /// The schematic's corner with the largest number on each axis
@@ -117,12 +117,12 @@ fn spawn_schematic_root_on_new_loaded_schematic(
 
     // Schematic
     rendered_schem: Option<Single<(Entity, &SchematicRoot)>>,
-    loaded_assets: Res<Assets<SchematicAsset>>,
+    loaded_assets: Res<Assets<Schematic>>,
     loaded_handle_resource: Res<LoadedSchematic>,
 
     channel: Res<ChunkMeshChannel>,
 
-    mut message_writer: MessageWriter<LoadingNewBlocks>,
+    mut message_writer: MessageWriter<NewBlocksLoadingMessage>,
 ) {
     // A "Loaded" schematic is one currently loaded within the asset server.
     // A "Rendered" schematic is the one being rendered in the world.
@@ -153,7 +153,7 @@ fn spawn_schematic_root_on_new_loaded_schematic(
 
     // Broadcast schematic bounds when the schematic STARTS loading
     let (min_corner, max_corner) = schematic.bounds();
-    message_writer.write(LoadingNewBlocks {
+    message_writer.write(NewBlocksLoadingMessage {
         min_corner,
         max_corner,
     });

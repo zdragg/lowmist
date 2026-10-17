@@ -4,8 +4,8 @@ use voxel_traversal::VoxelRaycast;
 
 use crate::plugins::{
     blocks::{
-        LoadingNewBlocks,
-        schematic::{LoadedSchematic, SchematicAsset},
+        NewBlocksLoadingMessage,
+        schematic::{LoadedSchematic, Schematic},
     },
     camera::MinecraftCamera,
 };
@@ -37,9 +37,9 @@ struct PointedBlock(Option<(IVec3, BlockStatePaletteEntry)>);
 /// Store None into the Resource if currently looking at no blocks within REACH.
 fn find_pointed_block(
     schem_handle: Res<LoadedSchematic>,
-    schem_asset_storage: Res<Assets<SchematicAsset>>,
+    schem_asset_storage: Res<Assets<Schematic>>,
     camera: Option<Single<Ref<Transform>, With<MinecraftCamera>>>,
-    mut events: MessageReader<LoadingNewBlocks>,
+    mut events: MessageReader<NewBlocksLoadingMessage>,
 
     mut pointed_block: ResMut<PointedBlock>,
 ) {

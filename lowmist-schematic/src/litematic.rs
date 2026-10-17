@@ -63,7 +63,7 @@ pub struct Litematic {
 ///
 /// are produced on a couple 1.13.2 Litematica builds, with should have data version 1631.
 ///
-/// Note: the number 1631 was hardcoded for several versions until the bug was fixed in
+/// Side note: the number 1631 was hardcoded for several versions until the bug was fixed in
 /// [this commit](https://github.com/maruohon/litematica/commit/d817368bb803404de09bc3f00d318e174df7c2b9) for 1.15.
 /// Due to this bug, 1.13, 1.14 and a some 1.15 schematics will all show data version 1631.
 /// This may cause some unwanted consequences.
