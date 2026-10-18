@@ -72,23 +72,29 @@ impl AssetLoader for SchematicLoader {
 ///
 /// To change the loaded schematic:
 /// ```rust
+/// use bevy::prelude::*;
+/// use bevy::asset::AssetPath;
+/// use lowmist::plugins::blocks::schematic::LoadedSchematic;
 /// fn load_schematic(
 ///     mut loaded_handle_resource: ResMut<LoadedSchematic>,
 ///     asset_server: Res<AssetServer>
 /// ) {
-///     let schem_path = todo!();
+///     let schem_path = AssetPath::parse("path_to_schematic");
 ///     loaded_handle_resource.0 = asset_server.load(schem_path);
 /// }
 /// ```
 ///
 /// To read the loaded schematic:
 /// ```rust
+/// use bevy::prelude::*;
+/// use lowmist::plugins::blocks::schematic::Schematic;
+/// use lowmist::plugins::blocks::schematic::LoadedSchematic;
 /// fn read_schematic(
 ///     loaded_handle_resource: Res<LoadedSchematic>,
 ///     loaded_schems: Res<Assets<Schematic>>,
 /// ) {
 ///     let loaded_handle = &loaded_handle_resource.0;
-///     if let Some(loaded_schem) = loaded_assets.get(loaded_handle) {
+///     if let Some(loaded_schem) = loaded_schems.get(loaded_handle) {
 ///         todo!();
 ///     }
 /// }

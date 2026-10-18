@@ -1,7 +1,7 @@
 //! Minecraft Resource Pack handler.
 //!
 //! - downloads the default resource pack from the internet
-//! - parses the files using `lowmist-resource-pack`
+//! - parses the files using `lowmist-respack`
 //! - loads the parsed files into the asset server
 //! - generates a new ModelBaker dynamically when loaded resource packs change
 
