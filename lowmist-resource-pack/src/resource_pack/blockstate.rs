@@ -1,9 +1,10 @@
 //! <https://minecraft.wiki/w/Blockstates_definition>
 
-use std::num::NonZeroU32;
+use std::{num::NonZeroU32, str::FromStr};
 
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
+use serde_with::DeserializeFromStr;
 
 use crate::resource_pack::{HashMap, ResourceLocation};
 
@@ -98,17 +99,16 @@ pub enum Condition {
 /// ```jsonc
 /// "!north|south"
 /// ```
-#[derive(Debug, Deserialize)]
-#[serde(try_from = "String")]
+#[derive(Debug, DeserializeFromStr)]
 pub struct Terms {
     pub entries: Vec<Term>,
 }
 
-impl TryFrom<String> for Terms {
-    type Error = String;
-    fn try_from(terms_str: String) -> Result<Self, Self::Error> {
-        let terms: Result<Vec<_>, Self::Error> = terms_str.split('|').map(Term::try_from).collect();
-        Ok(Terms { entries: terms? })
+impl FromStr for Terms {
+    type Err = !;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let terms: Vec<Term> = s.split('|').map(|s| s.parse().into_ok()).collect();
+        Ok(Terms { entries: terms })
     }
 }
 
@@ -121,16 +121,16 @@ pub struct Term {
     pub negated: bool,
 }
 
-impl TryFrom<&str> for Term {
-    type Error = String;
-    fn try_from(term_str: &str) -> Result<Self, Self::Error> {
-        let term = match term_str.strip_prefix('!') {
+impl FromStr for Term {
+    type Err = !;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let term = match s.strip_prefix('!') {
             Some(trimmed) => Term {
                 value: trimmed.to_owned(),
                 negated: true,
             },
             None => Term {
-                value: term_str.to_owned(),
+                value: s.to_owned(),
                 negated: false,
             },
         };
