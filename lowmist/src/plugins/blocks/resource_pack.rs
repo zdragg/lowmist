@@ -41,10 +41,10 @@ fn load_default_resource_pack(mut commands: Commands, asset_server: Res<AssetSer
 }
 
 #[derive(Asset, TypePath)]
-pub struct ResourcePack(lowmist_resource_pack::ResourcePack);
+pub struct ResourcePack(lowmist_respack::ResourcePack);
 
 impl ResourcePack {
-    pub fn inner(&self) -> &lowmist_resource_pack::ResourcePack {
+    pub fn inner(&self) -> &lowmist_respack::ResourcePack {
         &self.0
     }
 }
@@ -66,7 +66,7 @@ impl AssetLoader for ResourcePackLoader {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
 
-        let pack = lowmist_resource_pack::ResourcePack::load(&buf)?;
+        let pack = lowmist_respack::ResourcePack::load(&buf)?;
 
         Ok(ResourcePack(pack))
     }

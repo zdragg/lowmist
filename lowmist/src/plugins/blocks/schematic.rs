@@ -20,7 +20,7 @@ use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
     prelude::*,
 };
-use lowmist_schematic::Litematic;
+use lowmist_schem::Litematic;
 
 pub(super) struct InnerSchematicPlugin;
 

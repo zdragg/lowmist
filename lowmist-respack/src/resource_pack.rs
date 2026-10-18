@@ -1,6 +1,6 @@
 pub mod blockstate;
 pub mod model;
-pub mod texture_mcmeta;
+pub mod texture;
 
 use std::{
     fmt::Display,
@@ -14,7 +14,7 @@ use serde_with::DeserializeFromStr;
 use snafu::{ResultExt, Snafu};
 use zip::{ZipArchive, read::ZipFile, result::ZipError};
 
-use crate::resource_pack::{blockstate::Blockstate, model::Model, texture_mcmeta::TextureMcmeta};
+use crate::resource_pack::{blockstate::Blockstate, model::Model, texture::TextureMcmeta};
 
 type HashMap<K, V> = std::collections::HashMap<K, V, foldhash::fast::FixedState>;
 

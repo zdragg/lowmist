@@ -1,14 +1,14 @@
 [workspace]
 resolver = "3"
-members = ["lowmist", "lowmist-resource-pack", "lowmist-schematic"]
+members = ["lowmist", "lowmist-respack", "lowmist-schem"]
 default-members = ["lowmist"]
 
 [workspace.dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
 glam = "^0.33.2"  # Follow bevy glam version
 itertools = "0.15.0"
-lowmist-resource-pack = { path = "lowmist-resource-pack" }
-lowmist-schematic = { path = "lowmist-schematic" }
+lowmist-respack = { path = "lowmist-respack" }
+lowmist-schem = { path = "lowmist-schem" }
 serde = "1.0.229"
 serde_json = "1.0.154"
 snafu = "0.9.2"

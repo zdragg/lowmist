@@ -3228,6 +3228,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "googletest"
+version = "0.14.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6b5e2f2b556b7b90297a5a35c8267dd43a537923d2b329beefdba2b4ec19d94"
+dependencies = [
+ "googletest_macro",
+ "num-traits",
+ "regex",
+ "rustversion",
+]
+
+[[package]]
+name = "googletest_macro"
+version = "0.14.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ae6abc96141edd26bf5aeec0f119c129c44de3ced09e5073711a02cb74725d0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "gpu-allocator"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4035,17 +4058,18 @@ dependencies = [
  "glam",
  "itertools 0.15.0",
  "log",
- "lowmist-resource-pack",
- "lowmist-schematic",
+ "lowmist-respack",
+ "lowmist-schem",
  "voxel-traversal",
  "wasm_thread",
 ]
 
 [[package]]
-name = "lowmist-resource-pack"
+name = "lowmist-respack"
 version = "0.1.0"
 dependencies = [
  "foldhash 0.2.0",
+ "googletest",
  "itertools 0.15.0",
  "serde",
  "serde_json",
@@ -4056,7 +4080,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lowmist-schematic"
+name = "lowmist-schem"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
@@ -5147,6 +5171,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "regex"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]

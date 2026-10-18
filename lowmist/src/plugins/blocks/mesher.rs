@@ -4,7 +4,7 @@ use bevy::{
     platform::hash::fixed_hash_one,
     prelude::*,
 };
-use lowmist_schematic::Litematic;
+use lowmist_schem::Litematic;
 
 pub(super) fn build_chunk_mesh(schematic: &Litematic, chunk_pos: IVec3) -> Option<Mesh> {
     // BlockId(num) -> color_map(num) to find color

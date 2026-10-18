@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use flume::{Receiver, Sender};
-use lowmist_schematic::Litematic;
+use lowmist_schem::Litematic;
 
 use crate::plugins::blocks::{
     resource_pack::InnerMinecraftAssetPlugin,

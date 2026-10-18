@@ -1,6 +1,6 @@
 //! <https://minecraft.wiki/w/Blockstates_definition>
 
-use std::{num::NonZeroU32, str::FromStr};
+use std::{collections::BTreeMap, num::NonZeroU32, str::FromStr};
 
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
@@ -21,7 +21,7 @@ pub enum Blockstate {
     ///   }
     /// }
     /// ```
-    Variants(HashMap<String, OneOrManyVariants>),
+    Variants(HashMap<Properties, OneOrManyVariants>),
 
     /// Used instead of variants to combine models based on block state attributes.
     /// ```jsonc
@@ -229,4 +229,25 @@ pub enum Rotation {
     R90 = 90,
     R180 = 180,
     R270 = 270,
+}
+
+/// ```jsonc
+/// "facing=north,lit=false"
+/// ```
+#[derive(Debug, DeserializeFromStr, Hash, PartialEq, Eq)]
+pub struct Properties(pub BTreeMap<String, String>);
+
+impl FromStr for Properties {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let map = s
+            .split(',')
+            .map(|term| {
+                term.split_once('=')
+                    .map(|(a, b)| (a.to_owned(), b.to_owned()))
+                    .ok_or("invalid blockstate")
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(Self(map))
+    }
 }

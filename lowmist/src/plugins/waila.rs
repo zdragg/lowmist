@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use lowmist_schematic::BlockStatePaletteEntry;
+use lowmist_schem::BlockStatePaletteEntry;
 use voxel_traversal::VoxelRaycast;
 
 use crate::plugins::{

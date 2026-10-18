@@ -1,4 +1,4 @@
-use lowmist_schematic::Litematic;
+use lowmist_schem::Litematic;
 
 use std::{fs::File, path::PathBuf};
 
@@ -20,7 +20,7 @@ pub enum Error {
     },
     #[snafu(display("Could not parse {} as a schematic", path.display()))]
     ParseSchematic {
-        source: lowmist_schematic::Error,
+        source: lowmist_schem::Error,
         path: PathBuf,
     },
 }
