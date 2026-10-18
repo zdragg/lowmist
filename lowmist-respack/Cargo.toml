@@ -12,6 +12,3 @@ serde_repr = "0.1.21"
 serde_with = "3.24.0"
 snafu.workspace = true
 zip = { version = "9.0.2", default-features = false, features = ["deflate"] }
-
-[dev-dependencies]
-googletest = "0.14.3"

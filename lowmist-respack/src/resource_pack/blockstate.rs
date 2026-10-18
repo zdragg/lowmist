@@ -240,6 +240,9 @@ pub struct Properties(pub BTreeMap<String, String>);
 impl FromStr for Properties {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Ok(Self(BTreeMap::new()));
+        }
         let map = s
             .split(',')
             .map(|term| {
@@ -249,5 +252,127 @@ impl FromStr for Properties {
             })
             .collect::<Result<_, _>>()?;
         Ok(Self(map))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_wall_torch() {
+        let json = r#"
+            {
+                "variants": {
+                    "facing=east": { "model": "block/wall_torch" },
+                    "facing=south": { "model": "block/wall_torch", "y": 90 },
+                    "facing=west": { "model": "block/wall_torch", "y": 180 },
+                    "facing=north": { "model": "block/wall_torch", "y": 270 }
+                }
+            }
+            "#;
+
+        let _: Blockstate = serde_json::from_str(json).unwrap();
+    }
+
+    #[test]
+    fn parse_grass_block() {
+        let json = r#"
+            {
+                "variants": {
+                    "snowy=false": [
+                        { "model": "block/grass_block" },
+                        { "model": "block/grass_block", "y": 90 },
+                        { "model": "block/grass_block", "y": 180 },
+                        { "model": "block/grass_block", "y": 270 }
+                    ],
+                    "snowy=true":  { "model": "block/grass_block_snow" }
+                }
+            }
+            "#;
+
+        let _: Blockstate = serde_json::from_str(json).unwrap();
+    }
+
+    #[test]
+    fn parse_oak_fence() {
+        let json = r#"
+            {
+                "multipart": [
+                    {   "apply": { "model": "block/oak_fence_post" }},
+                    {   "when": { "north": "true" },
+                        "apply": { "model": "block/oak_fence_side", "uvlock": true }
+                    },
+                    {   "when": { "east": "true" },
+                        "apply": { "model": "block/oak_fence_side", "y": 90, "uvlock": true }
+                    },
+                    {   "when": { "south": "true" },
+                        "apply": { "model": "block/oak_fence_side", "y": 180, "uvlock": true }
+                    },
+                    {   "when": { "west": "true" },
+                        "apply": { "model": "block/oak_fence_side", "y": 270, "uvlock": true }
+                    }
+                ]
+            }
+            "#;
+
+        let _: Blockstate = serde_json::from_str(json).unwrap();
+    }
+
+    #[test]
+    fn parse_redstone_wire() {
+        let json = r#"
+            {
+                "multipart": [
+                    {   "when": { "OR": [
+                            {"north": "none", "east": "none", "south": "none", "west": "none"},
+                            {"north": "side|up", "east": "side|up" },
+                            {"east": "side|up", "south": "side|up" },
+                            {"south": "side|up", "west": "side|up"},
+                            {"west": "side|up", "north": "side|up"}
+                        ]},
+                        "apply": { "model": "block/redstone_dust_dot" }
+                    },
+                    {   "when": { "OR": [
+                            { "north": "side|up" },
+                            { "north": "none", "east": "none", "south": "side|up", "west": "none" }
+                        ]},
+                        "apply": { "model": "block/redstone_dust_side0" }
+                    },
+                    {   "when": { "OR": [
+                            { "south": "side|up" },
+                            { "north": "side|up", "east": "none", "south": "none", "west": "none" }
+                        ]},
+                        "apply": { "model": "block/redstone_dust_side_alt0" }
+                    },
+                    {   "when": { "OR": [
+                            { "east": "side|up" },
+                            { "north": "none", "east": "none", "south": "none", "west": "side|up" }
+                        ]},
+                        "apply": { "model": "block/redstone_dust_side_alt1", "y": 270 }
+                    },
+                    {   "when": { "OR": [
+                            { "west": "side|up" },
+                            { "north": "none", "east": "side|up", "south": "none", "west": "none" }
+                        ]},
+                        "apply": { "model": "block/redstone_dust_side1", "y": 270 }
+                    },
+                    {   "when": { "north": "up" },
+                        "apply": { "model": "block/redstone_dust_up" }
+                    },
+                    {   "when": { "east": "up" },
+                        "apply": { "model": "block/redstone_dust_up", "y": 90 }
+                    },
+                    {   "when": { "south": "up" },
+                        "apply": { "model": "block/redstone_dust_up", "y": 180 }
+                    },
+                    {   "when": { "west": "up" },
+                        "apply": { "model": "block/redstone_dust_up", "y": 270 }
+                    }
+                ]
+            }
+            "#;
+
+        let _: Blockstate = serde_json::from_str(json).unwrap();
     }
 }

@@ -91,3 +91,38 @@ pub enum MipmapStrategy {
     StrictCutout,
     DarkCutout,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_complex() {
+        let json = r#"
+            {
+              "animation": {
+                "interpolate": true,
+                "width": 16,
+                "height": 16,
+                "frametime": 2,
+                "frames": [
+                  0,
+                  { "index": 1, "time": 5 },
+                  2,
+                  { "index": 3 },
+                  { "index": 2, "time": 1 },
+                  1
+                ]
+              },
+              "texture": {
+                "blur": true,
+                "clamp": true,
+                "mipmap_strategy": "strict_cutout",
+                "alpha_cutoff_bias": 0.15
+              }
+            }
+            "#;
+
+        let _: TextureMcmeta = serde_json::from_str(json).unwrap();
+    }
+}
