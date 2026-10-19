@@ -3,10 +3,12 @@
 use std::{collections::BTreeMap, num::NonZeroU32, str::FromStr};
 
 use serde::Deserialize;
-use serde_repr::Deserialize_repr;
 use serde_with::DeserializeFromStr;
 
-use crate::resource_pack::{HashMap, ResourceLocation};
+use crate::{
+    resource_pack::{HashMap, ResourceLocation},
+    shared::QuarterRotation,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -174,17 +176,17 @@ pub struct Variant {
     /// Optional. Default: 0.
     /// Rotation of the model on the x-axis in increments of 90 degrees.
     #[serde(default)]
-    pub x: Rotation,
+    pub x: QuarterRotation,
 
     /// Optional. Default: 0.
     /// Rotation of the model on the y-axis in increments of 90 degrees.
     #[serde(default)]
-    pub y: Rotation,
+    pub y: QuarterRotation,
 
     /// Optional. Default: 0.
     /// Rotation of the model on the z-axis in increments of 90 degrees.
     #[serde(default)]
-    pub z: Rotation,
+    pub z: QuarterRotation,
 
     /// Optional. Default: false.
     /// If set to true, locks the rotation of the texture of a block.
@@ -219,16 +221,6 @@ pub struct WeightedVariant {
 
 fn default_weight() -> NonZeroU32 {
     NonZeroU32::MIN
-}
-
-#[derive(Debug, Default, Deserialize_repr)]
-#[repr(u16)]
-pub enum Rotation {
-    #[default]
-    R0 = 0,
-    R90 = 90,
-    R180 = 180,
-    R270 = 270,
 }
 
 /// ```jsonc

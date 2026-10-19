@@ -2,6 +2,7 @@ mod regions;
 use flate2::read::GzDecoder;
 use glam::IVec3;
 use indexmap::IndexSet;
+use nutype::nutype;
 pub use regions::*;
 mod metadata;
 pub use metadata::*;
@@ -34,8 +35,7 @@ impl BlockId {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Litematic {
-    #[serde(deserialize_with = "version_blocker")]
-    pub version: i32,
+    pub version: Version5To7,
     #[serde(default)]
     pub sub_version: i32,
     /// [https://minecraft.wiki/w/Data_version](https://minecraft.wiki/w/Data_version)
@@ -71,17 +71,11 @@ fn default_minecraft_data_version() -> i32 {
     1631
 }
 
-/// Serde deserializer that only allows versions 5 to 7.
-fn version_blocker<'de, D: Deserializer<'de>>(de: D) -> Result<i32, D::Error> {
-    let v = i32::deserialize(de)?;
-    match v {
-        5..=7 => Ok(v),
-        _ => Err(serde::de::Error::invalid_value(
-            serde::de::Unexpected::Signed(v.into()),
-            &"schematic version 5 to 7",
-        )),
-    }
-}
+#[nutype(
+    validate(greater_or_equal = 5, less_or_equal = 7),
+    derive(Debug, Deserialize)
+)]
+pub struct Version5To7(i32);
 
 #[derive(Debug, snafu::Snafu)]
 pub enum Error {

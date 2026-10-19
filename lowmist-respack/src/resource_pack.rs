@@ -1,5 +1,6 @@
 pub mod blockstate;
 pub mod model;
+pub mod shared;
 pub mod texture;
 
 use std::{

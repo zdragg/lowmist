@@ -6,9 +6,10 @@ edition = "2024"
 [dependencies]
 foldhash = "0.2.0"
 itertools.workspace = true
+nutype = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
+serde-inline-default = "1.0.3"
 serde_json.workspace = true
-serde_repr = "0.1.21"
 serde_with = "3.24.0"
 snafu.workspace = true
 zip = { version = "9.0.2", default-features = false, features = ["deflate"] }
