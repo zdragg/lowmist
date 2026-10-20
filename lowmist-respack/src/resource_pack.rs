@@ -15,7 +15,9 @@ use serde_with::DeserializeFromStr;
 use snafu::{ResultExt, Snafu};
 use zip::{ZipArchive, read::ZipFile, result::ZipError};
 
-use crate::resource_pack::{blockstate::Blockstate, model::Model, texture::TextureMcmeta};
+use crate::resource_pack::{
+    blockstate::BlockstateDispatcher, model::Model, texture::TextureMcmeta,
+};
 
 type HashMap<K, V> = std::collections::HashMap<K, V, foldhash::fast::FixedState>;
 
@@ -46,7 +48,7 @@ pub enum Error {
 
 #[derive(Debug)]
 pub struct ResourcePack {
-    pub blockstates: HashMap<ResourceLocation, Blockstate>,
+    pub blockstates: HashMap<ResourceLocation, BlockstateDispatcher>,
     pub models: HashMap<ResourceLocation, Model>,
     pub textures: HashMap<ResourceLocation, Vec<u8>>,
     pub textures_mcmeta: HashMap<ResourceLocation, TextureMcmeta>,
@@ -70,7 +72,7 @@ impl ResourcePack {
     pub fn load(bytes: &[u8]) -> Result<ResourcePack, Error> {
         let mut archive = ZipArchive::new(Cursor::new(bytes)).context(OpenZipSnafu)?;
 
-        let mut blockstates: HashMap<ResourceLocation, Blockstate> = HashMap::default();
+        let mut blockstates: HashMap<ResourceLocation, BlockstateDispatcher> = HashMap::default();
         let mut models: HashMap<ResourceLocation, Model> = HashMap::default();
         let mut textures: HashMap<ResourceLocation, Vec<u8>> = HashMap::default();
         let mut textures_mcmeta: HashMap<ResourceLocation, TextureMcmeta> = HashMap::default();

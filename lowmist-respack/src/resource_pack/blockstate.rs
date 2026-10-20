@@ -2,6 +2,7 @@
 
 use std::{collections::BTreeMap, num::NonZeroU32, str::FromStr};
 
+use nutype::nutype;
 use serde::Deserialize;
 use serde_with::DeserializeFromStr;
 
@@ -12,7 +13,7 @@ use crate::{
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Blockstate {
+pub enum BlockstateDispatcher {
     /// Holds the names of all the variants of the block.​
     /// ```jsonc
     /// {
@@ -157,7 +158,7 @@ pub enum OneOrManyVariants {
     ///   // ...
     /// ]
     /// ```
-    Many(Vec<WeightedVariant>),
+    Many(WeightedVariants),
 }
 
 /// ```jsonc
@@ -195,6 +196,9 @@ pub struct Variant {
     pub uvlock: bool,
 }
 
+#[nutype(derive(Deserialize, Debug), validate(predicate = |variants| !variants.is_empty()))]
+pub struct WeightedVariants(Vec<WeightedVariant>);
+
 /// ```jsonc
 /// {
 ///   "model": "minecraft:block/chorus_plant_noside",
@@ -223,6 +227,12 @@ fn default_weight() -> NonZeroU32 {
     NonZeroU32::MIN
 }
 
+/// "facing=north" matches ALL blockstates with "facing=north", including:
+///
+/// "facing=north" \
+/// "facing=north,lit=true" \
+/// "facing=north,whatever=whatever"
+///
 /// ```jsonc
 /// "facing=north,lit=false"
 /// ```
@@ -264,7 +274,7 @@ mod tests {
             }
             "#;
 
-        let _: Blockstate = serde_json::from_str(json).unwrap();
+        let _: BlockstateDispatcher = serde_json::from_str(json).unwrap();
     }
 
     #[test]
@@ -283,7 +293,7 @@ mod tests {
             }
             "#;
 
-        let _: Blockstate = serde_json::from_str(json).unwrap();
+        let _: BlockstateDispatcher = serde_json::from_str(json).unwrap();
     }
 
     #[test]
@@ -308,7 +318,7 @@ mod tests {
             }
             "#;
 
-        let _: Blockstate = serde_json::from_str(json).unwrap();
+        let _: BlockstateDispatcher = serde_json::from_str(json).unwrap();
     }
 
     #[test]
@@ -365,6 +375,21 @@ mod tests {
             }
             "#;
 
-        let _: Blockstate = serde_json::from_str(json).unwrap();
+        let _: BlockstateDispatcher = serde_json::from_str(json).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_empty_many_variants() {
+        let json = r#"
+            {
+                "variants": {
+                    "snowy=false": [],
+                    "snowy=true":  { "model": "block/grass_block_snow" }
+                }
+            }
+            "#;
+
+        let _: BlockstateDispatcher = serde_json::from_str(json).unwrap();
     }
 }
