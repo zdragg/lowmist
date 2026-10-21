@@ -55,20 +55,6 @@ pub struct ResourcePack {
 }
 
 impl ResourcePack {
-    pub fn get_blockstate(&self, key: &ResourceLocation) -> Option<&Blockstate> {
-        self.blockstates.get(key)
-    }
-
-    pub fn get_model(&self, key: &ResourceLocation) -> Option<&Model> {
-        self.models.get(key)
-    }
-
-    pub fn get_texture(&self, key: &ResourceLocation) -> Option<(&[u8], Option<&TextureMcmeta>)> {
-        self.textures
-            .get(key)
-            .map(|texture| (texture.as_slice(), self.textures_mcmeta.get(key)))
-    }
-
     pub fn load(bytes: &[u8]) -> Result<ResourcePack, Error> {
         let mut archive = ZipArchive::new(Cursor::new(bytes)).context(OpenZipSnafu)?;
 

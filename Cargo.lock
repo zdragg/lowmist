@@ -4027,6 +4027,7 @@ version = "0.1.0"
 dependencies = [
  "foldhash 0.2.0",
  "itertools 0.15.0",
+ "nunny",
  "nutype",
  "serde",
  "serde-inline-default",
@@ -4313,6 +4314,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "nunny"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a917062db7bc4aacea810b261939fd1c7e21c1156a641e3d9faa07740e3c4fb2"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

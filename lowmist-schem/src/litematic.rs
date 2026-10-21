@@ -10,7 +10,7 @@ use snafu::ResultExt;
 
 use std::{collections::BTreeMap, io::Read};
 
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
 use crate::update::MAPPINGS;
 

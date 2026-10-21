@@ -2,18 +2,15 @@
 
 use std::{collections::BTreeMap, num::NonZeroU32, str::FromStr};
 
-use nutype::nutype;
+use nunny::NonEmpty;
 use serde::Deserialize;
+use serde_inline_default::serde_inline_default;
 use serde_with::DeserializeFromStr;
 
-use crate::{
-    resource_pack::{HashMap, ResourceLocation},
-    shared::QuarterRotation,
-};
+use crate::{resource_pack::ResourceLocation, shared::QuarterRotation};
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum BlockstateDispatcher {
+pub struct BlockstateDispatcher {
     /// Holds the names of all the variants of the block.​
     /// ```jsonc
     /// {
@@ -24,9 +21,9 @@ pub enum BlockstateDispatcher {
     ///   }
     /// }
     /// ```
-    Variants(HashMap<Properties, OneOrManyVariants>),
+    variants: Option<BTreeMap<Properties, OneOrManyVariants>>,
 
-    /// Used instead of variants to combine models based on block state attributes.
+    /// Used to combine models based on block state attributes.
     /// ```jsonc
     /// {
     ///   "multipart": [
@@ -36,7 +33,84 @@ pub enum BlockstateDispatcher {
     ///   ]
     /// }
     /// ```
-    Multipart(Vec<Selector>),
+    multipart: Option<NonEmpty<Vec<PartSelector>>>,
+}
+
+impl BlockstateDispatcher {
+    /// Dispatches the correct set of model pointers ([`OneOrManyVariants`]) based on the
+    /// provided target properties
+    pub fn dispatch(
+        &self,
+        target_props: &BTreeMap<String, String>,
+    ) -> Option<Vec<&OneOrManyVariants>> {
+        // Does this blockstate dispatcher have definitions for `block_properties`?
+        if let Some(variants) = &self.variants {
+            for (prop_selector, target) in variants {
+                if prop_selector.applies_to(target_props) {
+                    return Some(vec![target]);
+                }
+            }
+        }
+
+        if let Some(selectors) = &self.multipart {
+            return Some(
+                selectors
+                    .iter()
+                    .filter_map(|selector| {
+                        let Some(condition) = &selector.when else {
+                            return Some(&selector.apply); // Unset = always applies
+                        };
+                        condition
+                            .applies_to(target_props)
+                            .then_some(&selector.apply)
+                    })
+                    .collect(),
+            );
+        }
+
+        None
+    }
+}
+
+/// "facing=north" matches ALL blockstates with "facing=north", including:
+///
+/// "facing=north" \
+/// "facing=north,lit=true" \
+/// "facing=north,whatever=whatever"
+///
+/// ```jsonc
+/// "facing=north,lit=false"
+/// ```
+#[derive(Debug, DeserializeFromStr, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Properties(pub BTreeMap<String, String>);
+
+impl FromStr for Properties {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Ok(Self(BTreeMap::new()));
+        }
+        let map = s
+            .split(',')
+            .map(|term| {
+                term.split_once('=')
+                    .map(|(a, b)| (a.to_owned(), b.to_owned()))
+                    .ok_or("invalid blockstate")
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(Self(map))
+    }
+}
+
+impl Properties {
+    /// Returns true if every one of `self`'s properties exist on `target_props`.
+    ///
+    /// In other words, tests if `self` is a subset of `target_props`.
+    pub fn applies_to(&self, target_props: &BTreeMap<String, String>) -> bool {
+        self.0
+            .iter()
+            .all(|(key, value)| target_props.get(key) == Some(value))
+    }
 }
 
 /// Determines a case and the model that should apply in that case.
@@ -47,11 +121,11 @@ pub enum BlockstateDispatcher {
 /// }
 /// ```
 #[derive(Debug, Deserialize)]
-pub struct Selector {
+pub struct PartSelector {
     /// Determines the model(s) to apply and its properties.
     /// There can be one model or an array of models.
     /// If set to an array, the model is chosen randomly from the options given,
-    /// with each option being specified in separate subsidiary [NBT Compound / JSON Object]-tags.
+    /// with each option being specified in separate subsidiary object tags.
     pub apply: OneOrManyVariants,
 
     /// A list of cases that have to be met for the model to be applied. If unset, the model always applies.
@@ -96,7 +170,27 @@ pub enum Condition {
     /// }
     /// ```
     #[serde(untagged)]
-    Properties(HashMap<String, Terms>),
+    Properties(BTreeMap<String, Terms>),
+}
+
+impl Condition {
+    /// Recursively checks if `self` applies to `target_props`.
+    pub fn applies_to(&self, target_props: &BTreeMap<String, String>) -> bool {
+        match self {
+            Condition::And(conditions) => conditions
+                .iter()
+                .all(|condition| condition.applies_to(target_props)),
+            Condition::Or(conditions) => conditions
+                .iter()
+                .any(|condition| condition.applies_to(target_props)),
+            Condition::Properties(props) => props.iter().all(|(key, value)| {
+                let Some(target_value) = target_props.get(key) else {
+                    return false;
+                };
+                value.applies_to(target_value)
+            }),
+        }
+    }
 }
 
 /// ```jsonc
@@ -112,6 +206,15 @@ impl FromStr for Terms {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let terms: Vec<Term> = s.split('|').map(|s| s.parse().into_ok()).collect();
         Ok(Terms { entries: terms })
+    }
+}
+
+impl Terms {
+    /// Returns whether any of the term entries applies to `target_value`.
+    pub fn applies_to(&self, target_value: &str) -> bool {
+        self.entries
+            .iter()
+            .any(|term| term.applies_to(target_value))
     }
 }
 
@@ -141,6 +244,15 @@ impl FromStr for Term {
     }
 }
 
+impl Term {
+    /// Returns:
+    /// - if negated is false, whether `target_value` is equal to `value`;
+    /// - if negated is true, whether `target_value` is unequal to `value`.
+    pub fn applies_to(&self, target_value: &str) -> bool {
+        self.negated != (self.value == target_value)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum OneOrManyVariants {
@@ -158,7 +270,7 @@ pub enum OneOrManyVariants {
     ///   // ...
     /// ]
     /// ```
-    Many(WeightedVariants),
+    Many(NonEmpty<Vec<WeightedVariant>>),
 }
 
 /// ```jsonc
@@ -196,9 +308,6 @@ pub struct Variant {
     pub uvlock: bool,
 }
 
-#[nutype(derive(Deserialize, Debug), validate(predicate = |variants| !variants.is_empty()))]
-pub struct WeightedVariants(Vec<WeightedVariant>);
-
 /// ```jsonc
 /// {
 ///   "model": "minecraft:block/chorus_plant_noside",
@@ -206,6 +315,7 @@ pub struct WeightedVariants(Vec<WeightedVariant>);
 ///   "weight": 2
 /// }
 /// ```
+#[serde_inline_default]
 #[derive(Debug, Deserialize)]
 pub struct WeightedVariant {
     #[serde(flatten)]
@@ -219,42 +329,8 @@ pub struct WeightedVariant {
     /// then their combined weight would be 4 (1+1+2). The probability of
     /// each model being used would then be determined by dividing
     /// each weight by 4: 1/4, 1/4 and 2/4, or 25%, 25% and 50%, respectively.)
-    #[serde(default = "default_weight")]
+    #[serde_inline_default(NonZeroU32::MIN)]
     pub weight: NonZeroU32,
-}
-
-fn default_weight() -> NonZeroU32 {
-    NonZeroU32::MIN
-}
-
-/// "facing=north" matches ALL blockstates with "facing=north", including:
-///
-/// "facing=north" \
-/// "facing=north,lit=true" \
-/// "facing=north,whatever=whatever"
-///
-/// ```jsonc
-/// "facing=north,lit=false"
-/// ```
-#[derive(Debug, DeserializeFromStr, Hash, PartialEq, Eq)]
-pub struct Properties(pub BTreeMap<String, String>);
-
-impl FromStr for Properties {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() {
-            return Ok(Self(BTreeMap::new()));
-        }
-        let map = s
-            .split(',')
-            .map(|term| {
-                term.split_once('=')
-                    .map(|(a, b)| (a.to_owned(), b.to_owned()))
-                    .ok_or("invalid blockstate")
-            })
-            .collect::<Result<_, _>>()?;
-        Ok(Self(map))
-    }
 }
 
 #[cfg(test)]
