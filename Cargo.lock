@@ -4017,6 +4017,7 @@ dependencies = [
  "log",
  "lowmist-respack",
  "lowmist-schem",
+ "nunny",
  "voxel-traversal",
  "wasm_thread",
 ]

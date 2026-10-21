@@ -1,16 +1,13 @@
 //! <https://minecraft.wiki/w/Model>
 
-use std::str::FromStr;
+use std::{collections::BTreeMap, str::FromStr};
 
 use nutype::nutype;
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use serde_with::DeserializeFromStr;
 
-use crate::{
-    resource_pack::{HashMap, ResourceLocation},
-    shared::QuarterRotation,
-};
+use crate::{resource_pack::ResourceLocation, shared::QuarterRotation};
 
 #[serde_inline_default]
 #[derive(Debug, Deserialize)]
@@ -30,7 +27,7 @@ pub struct Model {
 
     /// Holds the textures of the model, in form of
     /// a resource location or another texture variable.
-    pub textures: Option<HashMap<String, Texture>>,
+    pub textures: Option<BTreeMap<TextureVariable, Texture>>,
 
     /// Contains all the elements of the model.
     ///
@@ -43,6 +40,16 @@ pub struct Model {
 
     /// Holds the different places where item models are displayed.
     pub display: Option<Display>,
+}
+
+impl Model {
+    pub const MISSING: Model = Model {
+        parent: None,
+        ambientocclusion: true,
+        textures: None,
+        elements: None,
+        display: None,
+    };
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,53 +77,66 @@ pub enum Texture {
     ///    "body": "block/anvil"
     /// },
     /// ```
-    Basic(TextureVariableOrResourceLocation),
+    Basic(VariableOrResource),
 
     /// ```json
     /// "textures": {
     ///   "all": {
-    ///     "sprite": "minecraft:block/light_gray_stained_glass"
-    ///     "force_translucent": true,
+    ///     "sprite": "minecraft:block/light_gray_stained_glass",
+    ///     "force_translucent": true
     ///   }
     /// }
     /// ```
-    Advanced {
-        /// The resource location of a texture.
-        /// Note that texture variables cannot be used here.
-        sprite: ResourceLocation,
+    WithTranslucency(TextureResourceLocation),
+}
 
-        /// Defines whether the texture should be considered
-        /// translucent even when it is not.
-        ///
-        /// Normally, Minecraft determines whether a block is
-        /// translucent by checking if any of its textures has
-        /// any translucent pixels. Setting this to true overrides
-        /// that behavior for this texture.
-        #[serde(default)]
-        force_translucent: bool,
-    },
+#[derive(Debug, Deserialize)]
+pub struct TextureResourceLocation {
+    /// The resource location of a texture.
+    /// Note that texture variables cannot be used here.
+    pub sprite: ResourceLocation,
+
+    /// Defines whether the texture should be considered
+    /// translucent even when it is not.
+    ///
+    /// Normally, Minecraft determines whether a block is
+    /// translucent by checking if any of its textures has
+    /// any translucent pixels. Setting this to true overrides
+    /// that behavior for this texture.
+    #[serde(default)]
+    pub force_translucent: bool,
+}
+
+impl From<ResourceLocation> for TextureResourceLocation {
+    fn from(sprite: ResourceLocation) -> Self {
+        Self {
+            sprite,
+            force_translucent: false,
+        }
+    }
 }
 
 #[derive(Debug, DeserializeFromStr)]
-pub enum TextureVariableOrResourceLocation {
-    TextureVariable(TextureVariable),   // Checks '#' prefix first
-    ResourceLocation(ResourceLocation), // Infalliable deserialization
+pub enum VariableOrResource {
+    TextureVariable(TextureVariable),
+    ResourceLocation(TextureResourceLocation),
 }
 
-impl FromStr for TextureVariableOrResourceLocation {
+impl FromStr for VariableOrResource {
     type Err = !;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let res = if s.starts_with('#') {
             s.parse().map(Self::TextureVariable)
         } else {
-            s.parse().map(Self::ResourceLocation)
+            s.parse::<ResourceLocation>()
+                .map(|id| Self::ResourceLocation(id.into()))
         };
 
         Ok(res.into_ok())
     }
 }
 
-#[derive(Debug, DeserializeFromStr)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, DeserializeFromStr)]
 pub struct TextureVariable(pub String);
 
 impl FromStr for TextureVariable {
@@ -126,7 +146,7 @@ impl FromStr for TextureVariable {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Element {
     /// Start point of a cuboid according to the scheme [x, y, z].
     /// Values must be between -16 and 32.
@@ -138,7 +158,7 @@ pub struct Element {
 
     /// Holds all the faces of the cuboid.
     /// If a face is left out, it does not render.
-    pub faces: HashMap<FaceDirection, Face>,
+    pub faces: BTreeMap<FaceDirection, Face>,
 
     /// Defines the minimum light level that the element can receive.
     /// Can be 0-15, defaults to 0.
@@ -155,11 +175,11 @@ pub struct Element {
 
 #[nutype(
     validate(greater_or_equal = (-16.0), less_or_equal = 32.0, finite),
-    derive(Deserialize, Debug)
+    derive(Deserialize, Debug, PartialEq)
 )]
 pub struct ElementCoord(f32);
 
-#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Hash, PartialOrd, Ord, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum FaceDirection {
     Down,
@@ -171,7 +191,7 @@ pub enum FaceDirection {
 }
 
 #[serde_inline_default]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct Face {
     /// Defines the area of the texture to use according to
     /// the scheme [x1, y1, x2, y2].

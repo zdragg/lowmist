@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 foldhash = "0.2.0"
 itertools.workspace = true
-nunny = { version = "0.2.2", features = ["serde"] }
+nunny = { workspace = true, features = ["serde"] }
 nutype = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
 serde-inline-default = "1.0.3"

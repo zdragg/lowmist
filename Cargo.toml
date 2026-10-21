@@ -8,6 +8,7 @@ glam = "^0.33.2"  # Follow bevy glam version
 itertools = "0.15.0"
 lowmist-respack = { path = "lowmist-respack" }
 lowmist-schem = { path = "lowmist-schem" }
+nunny = "0.2.2"
 nutype = "0.8.0"
 serde = "1.0.229"
 serde_json = "1.0.154"
