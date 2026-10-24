@@ -4,6 +4,7 @@ pub mod shared;
 pub mod texture;
 
 use std::{
+    collections::BTreeMap,
     fmt::Display,
     io::{Cursor, Read, Seek},
     str::FromStr,
@@ -50,7 +51,7 @@ pub enum Error {
 pub struct ResourcePack {
     pub blockstates: HashMap<ResourceLocation, BlockstateDispatcher>,
     pub models: HashMap<ResourceLocation, Model>,
-    pub textures: HashMap<ResourceLocation, Vec<u8>>,
+    pub textures: BTreeMap<ResourceLocation, Vec<u8>>,
     pub textures_mcmeta: HashMap<ResourceLocation, TextureMcmeta>,
 }
 
@@ -60,7 +61,7 @@ impl ResourcePack {
 
         let mut blockstates: HashMap<ResourceLocation, BlockstateDispatcher> = HashMap::default();
         let mut models: HashMap<ResourceLocation, Model> = HashMap::default();
-        let mut textures: HashMap<ResourceLocation, Vec<u8>> = HashMap::default();
+        let mut textures: BTreeMap<ResourceLocation, Vec<u8>> = BTreeMap::default();
         let mut textures_mcmeta: HashMap<ResourceLocation, TextureMcmeta> = HashMap::default();
 
         for index in 0..archive.len() {
@@ -142,7 +143,7 @@ fn parse_zip_entry<R: Read + Seek, T: DeserializeOwned>(
     Ok((key, result))
 }
 
-#[derive(Clone, Debug, DeserializeFromStr, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, DeserializeFromStr, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ResourceLocation {
     pub namespace: String,
     pub path: String,

@@ -16,7 +16,8 @@ use lowmist_respack::{
     ResourceLocation,
     blockstate::{BlockstateDispatcher, OneOrManyVariants},
     model::{
-        self, Element, Model, Texture, TextureResourceLocation, TextureVariable, VariableOrResource,
+        self, Element, FaceDirection, Model, Texture, TextureResourceLocation, TextureVariable,
+        VariableOrResource,
     },
     texture::TextureMcmeta,
 };
@@ -151,18 +152,18 @@ impl<'a> PackStackRef<'a> {
             return Ok(None);
         };
 
-        let variant_iter = variants.into_iter().map(|variant| match variant {
-            OneOrManyVariants::Many(many) => &many.first().variant, // TODO: make quads for each weighted variant
-            OneOrManyVariants::One(one) => one,
-        });
+        let resolved_models: Vec<_> = variants
+            .into_iter()
+            .map(|variant| match variant {
+                OneOrManyVariants::Many(many) => &many.first().variant, // TODO: make quads for each weighted variant
+                OneOrManyVariants::One(one) => one,
+            })
+            .filter_map(|variant| {
+                ResolvedModel::resolve_model_chain(&variant.model, |id| self.get_model(id))
+                    .transpose()
+            })
+            .collect::<Result<_>>()?;
 
-        for variant in variant_iter {
-            let Some(resolved_model) =
-                ResolvedModel::resolve_model_chain(&variant.model, |id| self.get_model(id))?
-            else {
-                continue;
-            };
-        }
         Ok(Some(()))
     }
 }
@@ -205,13 +206,13 @@ impl<'a> ResolvedModel<'a> {
             current_id = model.parent.as_ref();
         }
 
-        // Whole chain does not define elements, nothing to render
         let Some(elements) = elements else {
+            // Whole chain does not define elements, nothing to render
             return Ok(None);
         };
 
-        // Elements is empty, nothing to render
         let Some(elements) = NonEmpty::<[Element]>::new(elements) else {
+            // Elements is empty, nothing to render
             return Ok(None);
         };
 
@@ -241,12 +242,12 @@ impl<'a> ResolvedModel<'a> {
                     "model {tail} has unmapped texture variable definition"
                 ))?;
 
-                match *texture {
+                match texture {
                     Texture::Basic(VariableOrResource::ResourceLocation(id))
                     | Texture::WithTranslucency(id) => break id,
 
                     Texture::Basic(VariableOrResource::TextureVariable(var)) => {
-                        if let Some(id) = resolved_map.get(var).cloned() {
+                        if let Some(id) = resolved_map.get(var) {
                             break id;
                         }
                         current_var = var;
@@ -263,6 +264,23 @@ impl<'a> ResolvedModel<'a> {
             elements,
             textures: resolved_map,
         }))
+    }
+}
+
+struct Quad<'a> {
+    corners: [Vec3; 4],
+    uv: [Vec2; 4],
+    normal: Vec3,
+    cullface: Option<FaceDirection>,
+    tintindex: i32,
+    texture: &'a TextureResourceLocation,
+}
+
+impl<'a> Quad<'a> {
+    /// Returns (cullface -> Quad)
+    fn build_quads(model: &ResolvedModel) -> BTreeMap<Option<FaceDirection>, Self> {
+        let elements = model.elements;
+        todo!()
     }
 }
 
@@ -283,7 +301,7 @@ fn build_model_baker(
     let pack_stack = PackStackRef::from_handles(&resource_pack_stack, &resource_pack_assets)?;
 
     // Fetch the blockstates used by the schematic
-    for (_, bs) in schem.inner().palettes() {
+    for (_, bs) in schem.get().palettes() {
         let block_name = &bs.name; // "minecraft:grass_block"
         let block_properties = &bs.properties; // "snowy=false"
 
