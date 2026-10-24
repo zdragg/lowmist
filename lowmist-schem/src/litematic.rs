@@ -237,7 +237,7 @@ impl Litematic {
             .map(|(id, entry)| (BlockId(id as u16), entry))
     }
 
-    // Returns an iterator over every chunk position with at least one block
+    // Returns an iterator over every chunk position
     pub fn chunk_positions(&self) -> impl Iterator<Item = IVec3> {
         let [min_x, min_y, min_z] = self.min_corner().div_euclid(IVec3::splat(16)).to_array();
         let [max_x, max_y, max_z] = self.max_corner().div_euclid(IVec3::splat(16)).to_array();

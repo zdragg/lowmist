@@ -1,26 +1,34 @@
 use bevy::{
-    asset::{AssetMetaCheck, UnapprovedPathMode},
+    asset::{AssetMetaCheck, UnapprovedPathMode, io::web::WebAssetPlugin},
     prelude::*,
 };
 use lowmist::{LowmistPlugins, plugins::blocks::schematic::LoadedSchematic};
 
-fn main() -> Result {
+fn main() {
+    #[cfg(not(target_family = "wasm"))]
+    start()
+}
+
+#[cfg_attr(target_family = "wasm", wasm_bindgen::prelude::wasm_bindgen)]
+pub fn start() {
     App::new()
         .add_plugins((
             bevy_web_file_drop::WebFileDropPlugin, // registers a new asset source, place before AssetPlugin
-            DefaultPlugins.set(AssetPlugin {
-                unapproved_path_mode: UnapprovedPathMode::Allow,
-                meta_check: AssetMetaCheck::Never,
-                ..default()
-            }),
+            DefaultPlugins
+                .set(WebAssetPlugin {
+                    silence_startup_warning: true,
+                })
+                .set(AssetPlugin {
+                    unapproved_path_mode: UnapprovedPathMode::Allow,
+                    meta_check: AssetMetaCheck::Never,
+                    ..default()
+                }),
             // diagnostic::FrameTimeDiagnosticsPlugin::default(),
             // diagnostic::LogDiagnosticsPlugin::default(),
             LowmistPlugins,
         ))
         .add_systems(Update, drag_and_drop)
         .run();
-
-    Ok(())
 }
 
 fn drag_and_drop(

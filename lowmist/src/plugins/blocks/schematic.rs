@@ -36,7 +36,7 @@ impl Plugin for InnerSchematicPlugin {
 pub struct Schematic(Arc<Litematic>);
 
 impl Schematic {
-    pub fn inner(&self) -> Arc<Litematic> {
+    pub fn get(&self) -> Arc<Litematic> {
         self.0.clone()
     }
 }

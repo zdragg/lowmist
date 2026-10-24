@@ -2,9 +2,12 @@ mod mesher;
 pub mod resource_pack;
 pub mod schematic;
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering::Relaxed},
+};
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::prelude::*;
 use flume::{Receiver, Sender};
 use lowmist_schem::Litematic;
 
@@ -20,83 +23,84 @@ impl Plugin for BlocksPlugin {
         app.add_plugins(InnerSchematicPlugin)
             .add_plugins(InnerMinecraftAssetPlugin)
             .add_message::<NewBlocksLoadingMessage>()
-            .add_systems(Startup, spawn_threads)
+            .add_systems(Startup, spawn_root_entity)
             .add_systems(
                 Update,
-                (
-                    spawn_schematic_root_on_new_loaded_schematic,
-                    spawn_schematic_children,
-                ),
+                (load_new_schematic, send_mesh_jobs, receive_mesh_results),
             );
     }
 }
 
 #[derive(Resource)]
-struct ChunkMeshChannel {
-    job_tx: Sender<(Arc<Litematic>, IVec3)>,
-    result_rx: Receiver<(IVec3, Mesh)>,
+struct MeshJobManager {
+    generation: Arc<AtomicUsize>,
+    chunk_positions: Arc<ChunkPositions>,
+    current_schematic: Arc<Litematic>,
+    in_flight: Arc<AtomicUsize>,
+    result_tx: Sender<(usize, IVec3, Mesh)>,
+    result_rx: Receiver<(usize, IVec3, Mesh)>,
 }
 
-const PERCENT_OF_TOTAL_THREADS: f32 = 0.25;
-const MIN_THREADS: usize = 1;
-const MAX_THREADS: usize = 4;
-
-const CHANNEL_BOUND: usize = 64;
-
-/// Spawns background meshing threads that take jobs and return meshes
-fn spawn_threads(mut commands: Commands) {
-    #[cfg(not(target_family = "wasm"))]
-    use std::thread;
-    #[cfg(target_family = "wasm")]
-    use wasm_thread as thread;
-
-    // Unbounded because main thread cannot wait for workers to receive
-    let (job_tx, job_rx) = flume::unbounded::<(Arc<Litematic>, IVec3)>();
-    // Bounded to decrease the amount of meshes waiting to be loaded in memory.
-    let (result_tx, result_rx) = flume::bounded::<(IVec3, Mesh)>(CHANNEL_BOUND);
-
-    let total_threads = thread::available_parallelism()
-        .map(|count| count.get())
-        .unwrap_or(1);
-    let desired = (total_threads as f32 * PERCENT_OF_TOTAL_THREADS).round() as usize;
-    let thread_count = desired.clamp(MIN_THREADS, MAX_THREADS);
-
-    for _ in 0..thread_count {
-        let job_rx = job_rx.clone();
-        let result_tx = result_tx.clone();
-        thread::spawn(move || {
-            // Thread needs to wait for the next task, so use blocking iter()
-            for (schem, chunk_pos) in job_rx.iter() {
-                let mesh = mesher::build_chunk_mesh(&schem, chunk_pos);
-                if let Some(mesh) = mesh {
-                    let _ = result_tx.send((chunk_pos, mesh));
-                }
-            }
-        });
+impl MeshJobManager {
+    fn new(schematic: Arc<Litematic>) -> Self {
+        let (result_tx, result_rx) = flume::unbounded::<(usize, IVec3, Mesh)>();
+        Self {
+            generation: Arc::new(AtomicUsize::new(0)),
+            chunk_positions: Arc::new(ChunkPositions::new(schematic.chunk_positions())),
+            current_schematic: schematic,
+            in_flight: Arc::new(AtomicUsize::new(0)),
+            result_tx,
+            result_rx,
+        }
     }
 
-    commands.insert_resource(ChunkMeshChannel { job_tx, result_rx });
+    /// Returns false if new_schematic is same as current schematic.
+    /// Otherwise, returns true.
+    fn try_swap_schematic(&mut self, new_schematic: Arc<Litematic>) -> bool {
+        if Arc::ptr_eq(&self.current_schematic, &new_schematic) {
+            return false; // Already equal
+        }
+        self.generation.fetch_add(1, Relaxed);
+        self.chunk_positions = Arc::new(ChunkPositions::new(new_schematic.chunk_positions()));
+        self.current_schematic = new_schematic;
+        true
+    }
 }
 
-// Do not make this component public.
-// The sole purpose for this to hold the handle is for a way to check
-// whether the currently spawned schematic entity and the schematic stored
-// within LoadedSchematic above is the same schematic or not.
-//
-// If you want to get access to the schematic, do it through the LoadedSchematic Resource.
+struct ChunkPositions {
+    chunk_position_cursor: AtomicUsize,
+    chunk_positions: Box<[IVec3]>,
+}
+
+impl ChunkPositions {
+    fn new(chunk_positions: impl IntoIterator<Item = IVec3>) -> Self {
+        Self {
+            chunk_position_cursor: AtomicUsize::new(0),
+            chunk_positions: chunk_positions.into_iter().collect(),
+        }
+    }
+    fn claim_next(&self) -> Option<IVec3> {
+        let index = self.chunk_position_cursor.fetch_add(1, Relaxed);
+        self.chunk_positions.get(index).copied()
+    }
+    fn done(&self) -> bool {
+        self.chunk_position_cursor.load(Relaxed) >= self.chunk_positions.len()
+    }
+}
+
 #[derive(Component)]
-struct SchematicRoot(Handle<Schematic>);
+struct SchematicRoot;
 
 #[derive(Component)]
 struct StandardMaterialHandle(Handle<StandardMaterial>);
 
-/// A replacement for Children that allows O(1) chunk_pos -> Entity
-#[derive(Component)]
-struct ChunkEntities(HashMap<IVec3, Entity>);
-impl ChunkEntities {
-    fn new() -> Self {
-        Self(HashMap::new())
-    }
+fn spawn_root_entity(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
+    commands.spawn((
+        SchematicRoot,
+        StandardMaterialHandle(materials.add(StandardMaterial::default())), // The shared standard material
+        Transform::IDENTITY,
+        Visibility::default(),
+    ));
 }
 
 /// A message that indicates a successful schematic spawn and includes the schemaitc bounds.
@@ -110,100 +114,93 @@ pub struct NewBlocksLoadingMessage {
     pub max_corner: IVec3,
 }
 
-fn spawn_schematic_root_on_new_loaded_schematic(
+fn load_new_schematic(
     mut commands: Commands,
-
-    mut materials: ResMut<Assets<StandardMaterial>>,
-
-    // Schematic
-    rendered_schem: Option<Single<(Entity, &SchematicRoot)>>,
-    loaded_assets: Res<Assets<Schematic>>,
-    loaded_handle_resource: Res<LoadedSchematic>,
-
-    channel: Res<ChunkMeshChannel>,
-
-    mut message_writer: MessageWriter<NewBlocksLoadingMessage>,
+    root_entity: Single<Entity, With<SchematicRoot>>,
+    mesh_manager: Option<ResMut<MeshJobManager>>,
+    schem_server: Res<Assets<Schematic>>,
+    loaded_schem_handle: Res<LoadedSchematic>,
+    mut new_blocks_message_writer: MessageWriter<NewBlocksLoadingMessage>,
 ) {
-    // A "Loaded" schematic is one currently loaded within the asset server.
-    // A "Rendered" schematic is the one being rendered in the world.
-
-    let loaded_handle = &loaded_handle_resource.0;
-    let Some(loaded_asset) = loaded_assets.get(loaded_handle) else {
+    let Some(new_schematic) = schem_server.get(&loaded_schem_handle.0) else {
         return; // No Loaded schematic. Nothing to do.
     };
+    let new_schematic = new_schematic.get();
 
-    if let Some(rendered_schem) = rendered_schem {
-        // A schematic is being Rendered.
-        let (rendered_entity, rendered_root) = *rendered_schem;
-        let rendered_schem_handle = &rendered_root.0; // Obtain the asset handle for the Rendered schematic.
-
-        if rendered_schem_handle == loaded_handle {
-            return; // Rendered == Loaded. Nothing to do.
-        }
-
-        // Otherwise, a different schematic is Loaded. Despawn the Rendered schematic entity.
-        commands.entity(rendered_entity).despawn();
-    }
-
-    let schematic = loaded_asset.inner();
-
-    for chunk_pos in schematic.chunk_positions() {
-        let _ = channel.job_tx.send((schematic.clone(), chunk_pos));
-    }
-
-    // Broadcast schematic bounds when the schematic STARTS loading
-    let (min_corner, max_corner) = schematic.bounds();
-    message_writer.write(NewBlocksLoadingMessage {
+    let (min_corner, max_corner) = new_schematic.bounds();
+    let new_blocks_loading_message = NewBlocksLoadingMessage {
         min_corner,
         max_corner,
-    });
+    };
 
-    commands.spawn((
-        SchematicRoot(loaded_handle_resource.0.clone()), // Schematic asset handle stored here
-        ChunkEntities::new(),                            // The rendered chunk entities
-        StandardMaterialHandle(materials.add(StandardMaterial::default())), // The shared standard material
-        Transform::IDENTITY,
-        Visibility::default(),
-    ));
-}
-
-const MESHES_UPLOADED_PER_FRAME: usize = 16;
-
-fn spawn_schematic_children(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-
-    channels: Res<ChunkMeshChannel>,
-    schem_parent: Single<
-        (Entity, &StandardMaterialHandle, Mut<ChunkEntities>),
-        With<SchematicRoot>,
-    >,
-) {
-    let (root, material, mut entities) = schem_parent.into_inner();
-
-    for (chunk_pos, mesh) in channels
-        .result_rx
-        .try_iter()
-        .take(MESHES_UPLOADED_PER_FRAME)
-    {
-        match entities.0.get(&chunk_pos) {
-            // Spawn new entity and insert
-            None => {
-                let entity = commands
-                    .spawn((
-                        ChildOf(root),
-                        Mesh3d(meshes.add(mesh)),
-                        MeshMaterial3d(material.0.clone()),
-                        Transform::from_translation((chunk_pos * 16).as_vec3()),
-                    ))
-                    .id();
-                entities.0.insert(chunk_pos, entity);
-            }
-            // Replace only the Mesh3d component on the entity
-            Some(entity) => {
-                let mesh_handle = meshes.add(mesh);
-                commands.entity(*entity).insert_if_neq(Mesh3d(mesh_handle));
+    match mesh_manager {
+        Some(mut manager) => {
+            if manager.try_swap_schematic(new_schematic) {
+                commands.entity(root_entity.entity()).despawn_children();
+                new_blocks_message_writer.write(new_blocks_loading_message);
             }
         }
+        None => {
+            commands.insert_resource(MeshJobManager::new(new_schematic));
+            new_blocks_message_writer.write(new_blocks_loading_message);
+        }
+    };
+}
+
+const MESHES_CAP: usize = 64;
+fn send_mesh_jobs(mesh_manager: If<ResMut<MeshJobManager>>) {
+    while mesh_manager.in_flight.load(Relaxed) <= MESHES_CAP {
+        if mesh_manager.chunk_positions.done() {
+            return;
+        }
+
+        let schematic = mesh_manager.current_schematic.clone();
+        let in_flight = mesh_manager.in_flight.clone();
+        let result_tx = mesh_manager.result_tx.clone();
+        let chunk_positions = mesh_manager.chunk_positions.clone();
+
+        let schematic_gen = mesh_manager.generation.load(Relaxed);
+        let current_gen = mesh_manager.generation.clone();
+
+        in_flight.fetch_add(1, Relaxed);
+        rayon::spawn(move || {
+            while let Some(chunk_pos) = chunk_positions.claim_next() {
+                if current_gen.load(Relaxed) != schematic_gen {
+                    // A new schematic has spawned, do nothing
+                    in_flight.fetch_sub(1, Relaxed);
+                    return;
+                }
+
+                if let Some(mesh) = mesher::build_chunk_mesh(&schematic, chunk_pos) {
+                    let _ = result_tx.send((schematic_gen, chunk_pos, mesh));
+                    return;
+                }
+            }
+
+            // No more chunk positions to claim
+            in_flight.fetch_sub(1, Relaxed);
+        });
+    }
+}
+
+fn receive_mesh_results(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mesh_manager: If<Res<MeshJobManager>>,
+    schematic_root: Single<(Entity, &StandardMaterialHandle), With<SchematicRoot>>,
+) {
+    let (root_entity, shared_material) = schematic_root.into_inner();
+
+    for (generation, chunk_pos, mesh) in mesh_manager.result_rx.drain() {
+        mesh_manager.in_flight.fetch_sub(1, Relaxed);
+        if mesh_manager.generation.load(Relaxed) != generation {
+            continue; // new schematic loaded during meshing
+        }
+        commands.spawn((
+            ChildOf(root_entity),
+            Mesh3d(meshes.add(mesh)),
+            MeshMaterial3d(shared_material.0.clone()),
+            Transform::from_translation((chunk_pos * 16).as_vec3()),
+        ));
     }
 }

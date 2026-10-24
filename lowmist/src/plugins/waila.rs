@@ -56,7 +56,7 @@ fn find_pointed_block(
         return;
     }
 
-    let schem = schem_asset.inner();
+    let schem = schem_asset.get();
 
     let start_pos = camera.translation;
     let direction = camera.forward();
